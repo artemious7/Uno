@@ -318,6 +318,9 @@
 		<None Update="C:\s\nv.github\uno-2\src\Uno.UI\UI\Xaml\Style\Generic\Generic.NavigationView.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</None>
+		<None Update="C:\s\nv.github\uno\src\Uno.UI\UI\Xaml\Controls\RatingControl\RatingControl.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</None>
 		<None Update="Mixins\macOS\FrameworkElementMixins.tt">
 		  <Generator>TextTemplatingFileGenerator</Generator>
 		  <LastGenOutput>FrameworkElementMixins.g.cs</LastGenOutput>
@@ -329,6 +332,15 @@
 		<None Update="Mixins\Wasm\VisualStatesMixins.tt">
 			<Generator>TextTemplatingFileGenerator</Generator>
 			<LastGenOutput>VisualStatesMixins.g.cs</LastGenOutput>
+		</None>
+		<None Update="UI\Xaml\Controls\RatingControl\RatingControl.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</None>
+		<None Update="C:\s\nv.github\uno\src\Uno.UI\UI\Xaml\Controls\RatingControl\RatingControl_themeresources.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</None>
+		<None Update="UI\Xaml\Controls\RatingControl\RatingControl_themeresources.xaml">
+		  <Generator>MSBuild:Compile</Generator>
 		</None>
 		<None Update="UI\Xaml\IFrameworkElementImplementation.macOS.cs">
 		  <DesignTime>True</DesignTime>
@@ -351,11 +363,6 @@
 
 	<ItemGroup>
 		<PRIResource Include="Resources\Strings\**\*.resw" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <UpToDateCheckInput Remove="UI\Xaml\Controls\NavigationView\NavigationViewItemPresenter.cs" />
-	  <UpToDateCheckInput Remove="UI\Xaml\Controls\NavigationView\NavigationViewTemplateSettings.cs" />
 	</ItemGroup>
 
 	<Target Name="BuildManualDependencies" BeforeTargets="_UnoSourceGenerator" Condition="!Exists($(T4Bin))">

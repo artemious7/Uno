@@ -1,14 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
 using System.Text;
+using Uno.Disposables;
+using Uno.UI.Helpers.WinUI;
+using Windows.Devices.Input;
 using Windows.Foundation;
+using Windows.System;
 using Windows.UI.Composition;
+using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
+using Windows.UI.Xaml.Automation.Peers;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Hosting;
+using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 
-namespace SamplesApp.Samples.WinUI.RatingControl
+namespace Windows.UI.Xaml.Controls
 {
 	enum RatingControlStates
 	{
@@ -28,21 +37,23 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 		Image
 	};
 
-	partial class RatingControl : Control
+	partial class RatingControl
     {
-		const float c_horizontalScaleAnimationCenterPoint = 0.5f;
-		const float c_verticalScaleAnimationCenterPoint = 0.8f;
-		const int c_defaultRatingFontSizeForRendering = 32; // (32 = 2 * [default fontsize] -- because of double size rendering), remove when MSFT #10030063 is done
-		const int c_itemSpacing = 8;
+		float c_horizontalScaleAnimationCenterPoint = 0.5f;
+		float c_verticalScaleAnimationCenterPoint = 0.8f;
+		int c_defaultRatingFontSizeForRendering = 16; //32; // (32 = 2 * [default fontsize] -- because of double size rendering), remove when MSFT #10030063 is done
+		int c_itemSpacing = 8;
 
-		const float c_mouseOverScale = 0.8f;
-		const float c_touchOverScale = 1.0f;
-		const float c_noPointerOverMagicNumber = -100;
+		float c_mouseOverScale = 0.8f;
+		float c_touchOverScale = 1.0f;
+		float c_noPointerOverMagicNumber = -100;
 
-		const int c_noValueSetSentinel = -1;
+		int c_noValueSetSentinel = -1;
 
 		Thickness c_focusVisualMargin = new Thickness( -8, -7, -8, 0 );
 
+		private SerialDisposable _subscriptions = new SerialDisposable();
+		private long m_fontFamilyChangedToken;
 
 		public RatingControl()
 		{
@@ -58,7 +69,7 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 		float RenderingRatingFontSize()
 		{
 			// MSFT #10030063 Replacing with Rating size DPs
-			return (float) (c_defaultRatingFontSizeForRendering * GetUISettings().TextScaleFactor());
+			return (float) (c_defaultRatingFontSizeForRendering * GetUISettings().TextScaleFactor);
 		}
 
 		float ActualRatingFontSize()
@@ -66,29 +77,45 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 			return RenderingRatingFontSize() / 2;
 		}
 
-		void OnApplyTemplate()
+		protected override void OnApplyTemplate()
 		{
 			RecycleEvents();
+
+			var disposable = new CompositeDisposable();
 
 			if (GetTemplateChild("Caption") is TextBlock captionTextBlock)
 			{
 				m_captionTextBlock = captionTextBlock;
-				m_captionSizeChangedToken = captionTextBlock.SizeChanged({ this, &OnCaptionSizeChanged });
+				captionTextBlock.SizeChanged += OnCaptionSizeChanged;
+				disposable.Add(() => captionTextBlock.SizeChanged -= OnCaptionSizeChanged);
 			}
 
-			if (GetTemplateChild("RatingBackgroundStackPane") is StackPanel backgroundStackPanel)
+			if (GetTemplateChild("RatingBackgroundStackPanel") is StackPanel backgroundStackPanel)
 			{
 				m_backgroundStackPanel = backgroundStackPanel;
-				m_pointerCancelledToken = backgroundStackPanel.PointerCanceled({ this, &OnPointerCancelledBackgroundStackPanel });
-				m_pointerCaptureLostToken = backgroundStackPanel.PointerCaptureLost({ this, &OnPointerCaptureLostBackgroundStackPanel });
-				m_pointerMovedToken = backgroundStackPanel.PointerMoved({ this, &OnPointerMovedOverBackgroundStackPanel });
-				m_pointerEnteredToken = backgroundStackPanel.PointerEntered({ this, &OnPointerEnteredBackgroundStackPanel });
-				m_pointerExitedToken = backgroundStackPanel.PointerExited({ this, &OnPointerExitedBackgroundStackPanel });
-				m_pointerPressedToken = backgroundStackPanel.PointerPressed({ this, &OnPointerPressedBackgroundStackPanel });
-				m_pointerReleasedToken = backgroundStackPanel.PointerReleased({ this, &OnPointerReleasedBackgroundStackPanel });
+				backgroundStackPanel.PointerCanceled += OnPointerCancelledBackgroundStackPanel;
+				disposable.Add(() => backgroundStackPanel.PointerCanceled += OnPointerCancelledBackgroundStackPanel);
+
+				backgroundStackPanel.PointerCaptureLost += OnPointerCaptureLostBackgroundStackPanel;
+				disposable.Add(() => backgroundStackPanel.PointerCaptureLost -= OnPointerCaptureLostBackgroundStackPanel);
+
+				backgroundStackPanel.PointerMoved += OnPointerMovedOverBackgroundStackPanel;
+				disposable.Add(() => backgroundStackPanel.PointerMoved -= OnPointerMovedOverBackgroundStackPanel);
+
+				backgroundStackPanel.PointerEntered += OnPointerEnteredBackgroundStackPanel;
+				disposable.Add(() => backgroundStackPanel.PointerEntered -= OnPointerEnteredBackgroundStackPanel);
+
+				backgroundStackPanel.PointerExited += OnPointerExitedBackgroundStackPanel;
+				disposable.Add(() => backgroundStackPanel.PointerExited -= OnPointerExitedBackgroundStackPanel);
+
+				backgroundStackPanel.PointerPressed += OnPointerPressedBackgroundStackPanel;
+				disposable.Add(() => backgroundStackPanel.PointerPressed -= OnPointerPressedBackgroundStackPanel);
+
+				backgroundStackPanel.PointerReleased += OnPointerReleasedBackgroundStackPanel;
+				disposable.Add(() => backgroundStackPanel.PointerReleased -= OnPointerReleasedBackgroundStackPanel);
 			}
 
-			m_foregroundStackPanel = GetTemplateChild("RatingForegroundStackPane") as StackPanel;
+			m_foregroundStackPanel = GetTemplateChild("RatingForegroundStackPanel") as StackPanel;
 
 			//if (SharedHelpers.IsRS1OrHigher())
 			//{
@@ -121,7 +148,8 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 			m_sharedPointerPropertySet.InsertScalar("pointerScalar", c_mouseOverScale);
  
 			StampOutRatingItems();
-			m_textScaleChangedRevoker = GetUISettings().TextScaleFactorChanged(var_revoke, { this, &OnTextScaleFactorChanged });
+			GetUISettings().TextScaleFactorChanged += OnTextScaleFactorChanged;
+			disposable.Add(() => GetUISettings().TextScaleFactorChanged -= OnTextScaleFactorChanged);
 		}
 
 
@@ -144,9 +172,9 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 		}
 
 		// IUIElement / IUIElementOverridesHelper
-		varmationPeer OnCreatevarmationPeer()
+		protected override AutomationPeer OnCreateAutomationPeer()
 		{
-			return new RatingControlvarmationPeer(this);
+			return new RatingControlAutomationPeer(this);
 		}
 
 		// private methods 
@@ -171,9 +199,11 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 				return;
 			}
 
+			ClearRatingItemsScales();
+
 			// Background initialization:
 
-			m_backgroundStackPanel.Children().Clear();
+			m_backgroundStackPanel.Children.Clear();
 
 			if (IsItemInfoPresentAndFontInfo())
 			{
@@ -185,7 +215,7 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 			}
 
 			// Foreground initialization:
-			m_foregroundStackPanel.Children().Clear();
+			m_foregroundStackPanel.Children.Clear();
 			if (IsItemInfoPresentAndFontInfo())
 			{
 				PopulateStackPanelWithItems("ForegroundGlyphDefaultTemplate", m_foregroundStackPanel, RatingControlStates.Set);
@@ -196,6 +226,18 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 			}
     
 			UpdateRatingItemsAppearance();
+
+			UpdateRatingItemsScales();
+		}
+
+		private void ClearRatingItemsScales()
+		{
+			_updateScale.Clear();
+		}
+
+		private void UpdateRatingItemsScales()
+		{
+			_updateScale.ForEach(a => a());
 		}
 
 		void ReRenderCaption()
@@ -218,7 +260,7 @@ namespace SamplesApp.Samples.WinUI.RatingControl
        
 				if (m_isPointerOver)
 				{
-					value = Math.Ceil(m_mousePercentage * MaxRating);
+					value = Math.Ceiling(m_mousePercentage * MaxRating);
 					if (ratingValue == c_noValueSetSentinel)
 					{
 						if (placeholderValue == -1)
@@ -260,33 +302,36 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 				}
 
 				int i = 0;
-				foreach(var uiElement in m_foregroundStackPanel.Children)
+				foreach(var nativeElement in m_foregroundStackPanel.Children)
 				{
-					// Handle clips on stars
-					float width = RenderingRatingFontSize();
-					if (i + 1 > value)
+					if (nativeElement is UIElement uiElement)
 					{
-						if (i < value)
+						// Handle clips on stars
+						float width = RenderingRatingFontSize();
+						if (i + 1 > value)
 						{
-							// partial stars
-							width *= (float)(value - math.Floor(value));
+							if (i < value)
+							{
+								// partial stars
+								width *= (float)(value - Math.Floor(value));
+							}
+							else
+							{
+								// empty stars
+								width = 0.0f;
+							}
 						}
-						else
-						{
-							// empty stars
-							width = 0.0f;
-						}
+
+						Rect rect = new Rect();
+						rect.X = 0;
+						rect.Y = 0;
+						rect.Height = RenderingRatingFontSize();
+						rect.Width = width;
+
+						RectangleGeometry rg = new RectangleGeometry();
+						rg.Rect = rect;
+						uiElement.Clip = rg;
 					}
-
-					Rect rect;
-					rect.X = 0;
-					rect.Y = 0;
-					rect.Height = RenderingRatingFontSize();
-					rect.Width = width;
-
-					RectangleGeometry rg = new RectangleGeometry();
-					rg.Rect = rect;
-					uiElement.Clip = rg;
 
 					i++;
 				}
@@ -296,7 +341,8 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 		}
 
 		void ApplyScaleExpressionAnimation(UIElement uiElement, int starIndex)
-		{ 
+		{
+#if !IS_UNO
 			Visual uiElementVisual = ElementCompositionPreview.GetElementVisual(uiElement);
 			Compositor comp = uiElementVisual.Compositor;
 
@@ -315,8 +361,39 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 
 			// Star size = 16. 0.5 and 0.8 are just arbitrary center point chosen in design spec
 			// 32 = star size * 2 because of the rendering at double size we do
-			uiElementVisual.CenterPoint = new Vector3(c_defaultRatingFontSizeForRendering * c_horizontalScaleAnimationCenterPoint, c_defaultRatingFontSizeForRendering * c_verticalScaleAnimationCenterPoint, 0.0f));
+			uiElementVisual.CenterPoint = new Vector3(c_defaultRatingFontSizeForRendering * c_horizontalScaleAnimationCenterPoint, c_defaultRatingFontSizeForRendering * c_verticalScaleAnimationCenterPoint, 0.0f);
+
+#else
+			float starCenter = (float)(CalculateStarCenter(starIndex));
+			var centerPoint =
+				new Vector3(c_defaultRatingFontSizeForRendering * c_horizontalScaleAnimationCenterPoint, c_defaultRatingFontSizeForRendering * c_verticalScaleAnimationCenterPoint, 0.0f);
+
+			uiElement.RenderTransform = new ScaleTransform()
+			{
+				CenterX = centerPoint.X,
+				CenterY = centerPoint.Y
+			};
+
+			_updateScale.Add(() => {
+
+				var value = Math.Max(
+					(
+						-0.0005 * _pointerScalar * ((starCenter - _starsScaleFocalPoint) * (starCenter - _starsScaleFocalPoint))) + 1.0 * _pointerScalar
+						, 0.5
+					);
+
+				if(uiElement.RenderTransform is ScaleTransform scale)
+				{
+					scale.ScaleX = value;
+					scale.ScaleY = value;
+				}
+			});
+#endif
 		}
+
+		private List<Action> _updateScale = new List<Action>();
+		private double _pointerScalar;
+		private float _starsScaleFocalPoint;
 
 		void PopulateStackPanelWithItems(string templateName, StackPanel stackPanel, RatingControlStates state)
 		{
@@ -327,7 +404,7 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 					if (dt.LoadContent() is UIElement ui)
 					{
 						CustomizeRatingItem(ui, state);
-						stackPanel.Children.Append(ui);
+						stackPanel.Children.Add(ui);
 						ApplyScaleExpressionAnimation(ui, i);
 					}
 				}
@@ -346,12 +423,13 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 			}
 			else if (IsItemInfoPresentAndImageInfo())
 			{
-				if (ui is Image image)
-				{
-					image.Source =GetAppropriateImageSource(type));
-					image.Width = RenderingRatingFontSize(); // 
-					image.Height = RenderingRatingFontSize(); // MSFT #10030063 Replacing with Rating size DPs
-				}
+				// UNO TODO
+				//if (ui is Image image)
+				//{
+				//	image.Source = GetAppropriateImageSource(type);
+				//	image.Width = RenderingRatingFontSize(); // 
+				//	image.Height = RenderingRatingFontSize(); // MSFT #10030063 Replacing with Rating size DPs
+				//}
 			}
 			else
 			{
@@ -364,7 +442,10 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 		{
 			foreach(var child in stackPanel.Children)
 			{
-				CustomizeRatingItem(child, state);
+				if (child is UIElement element)
+				{
+					CustomizeRatingItem(element, state);
+				}
 			}
 		}
 
@@ -395,7 +476,7 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 				return GetNextGlyphIfNull(rifi.UnsetGlyph, RatingControlStates.Set);
 
 			case RatingControlStates.Null:
-				return {};
+				return null;
 
 			default:
 				return rifi.Glyph; // "Set" state
@@ -476,7 +557,7 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 			if (change != 0.0)
 			{
 				double ratingValue = 0.0;
-				double oldRatingValue = Value();
+				double oldRatingValue = Value;
 				if (oldRatingValue != c_noValueSetSentinel)
 				{
 					// If the Value was programmatically set to a fraction, drop that fraction before we modify it
@@ -499,7 +580,7 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 				}
 				else
 				{
-					ratingValue = InitialSetValue();
+					ratingValue = InitialSetValue;
 				}
 
 				SetRatingTo(ratingValue, originatedFromMouse);
@@ -511,13 +592,13 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 			double ratingValue = 0.0;
 			double oldRatingValue = Value;
 
-			ratingValue = Math.Min(newRating, (double)(MaxRating()));
+			ratingValue = Math.Min(newRating, (double)(MaxRating));
 			ratingValue = Math.Max(ratingValue, 0.0);
 
 			// The base case, and the you have no rating, and you pressed left case [wherein nothing should happen]
 			if (oldRatingValue > c_noValueSetSentinel || ratingValue != 0.0)
 			{
-				if (!IsClearEnabled() && ratingValue <= 0.0)
+				if (!IsClearEnabled && ratingValue <= 0.0)
 				{
 					Value = 1.0;
 				}
@@ -544,11 +625,14 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 				//}
 
 				// Notify that the Value has changed
-				m_valueChangedEventSource(this, null);
+				OnValueChanged(this, null);
 			}
 		}
 
-		void OnPropertyChanged(DependencyPropertyChangedEventArgs args)
+		private static void OnStaticPropertyChanged(object sender, DependencyPropertyChangedEventArgs args)
+			=> (sender as RatingControl)?.OnPropertyChanged(sender, args);
+
+		void OnPropertyChanged(object sender, DependencyPropertyChangedEventArgs args)
 		{
 			var property = args.Property;
 
@@ -590,7 +674,7 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 			// Property value changed handling.
 			if (property == CaptionProperty)
 			{
-				OnCaptionChanged(args);
+				OnCaptionChanged();
 			}
 			else if (property == InitialSetValueProperty)
 			{
@@ -618,11 +702,11 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 			}
 			else if (property == ValueProperty)
 			{
-				OnValueChanged(args);
+				RaiseValueChanged();
 			}
 		}
 
-		void OnCaptionChanged(DependencyPropertyChangedEventArgs /*args*/)
+		void OnCaptionChanged()
 		{
 			ReRenderCaption();
 		}
@@ -634,12 +718,12 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 				for (int i = 0; i < MaxRating; i++)
 				{
 					// FUTURE: handle image rating items
-					if (var backgroundTB = safe_cast<TextBlock>(m_backgroundStackPanel.Children().GetAt(i)))
+					if (m_backgroundStackPanel.Children.ElementAtOrDefault(i) is TextBlock backgroundTB)
 					{
 						CustomizeRatingItem(backgroundTB, RatingControlStates.Unset);
 					}
 
-					if (var foregroundTB = safe_cast<TextBlock>(m_foregroundStackPanel.Children().GetAt(i)))
+					if (m_foregroundStackPanel.Children.ElementAtOrDefault(i) is TextBlock foregroundTB)
 					{
 						CustomizeRatingItem(foregroundTB, RatingControlStates.Set);
 					}
@@ -649,22 +733,22 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 			UpdateRatingItemsAppearance();
 		}
 
-		void OnInitialSetValueChanged(DependencyPropertyChangedEventArgs /*args*/)
+		void OnInitialSetValueChanged(DependencyPropertyChangedEventArgs args)
 		{
 
 		}
 
-		void OnIsClearEnabledChanged(DependencyPropertyChangedEventArgs /*args*/)
+		void OnIsClearEnabledChanged(DependencyPropertyChangedEventArgs args)
 		{
 
 		}
 
-		void OnIsReadOnlyChanged(DependencyPropertyChangedEventArgs /*args*/)
+		void OnIsReadOnlyChanged(DependencyPropertyChangedEventArgs args)
 		{
 			// TODO: Colour changes - see spec
 		}
 
-		void OnItemInfoChanged(DependencyPropertyChangedEventArgs /*args*/)
+		void OnItemInfoChanged(DependencyPropertyChangedEventArgs args)
 		{
 			bool changedType = false;
 
@@ -672,9 +756,9 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 			{
 				m_infoType = RatingInfoType.None;
 			}
-			else if (ItemInfo.try_as<RatingItemFontInfo>())
+			else if (ItemInfo is RatingItemFontInfo)
 			{
-				if (m_infoType != RatingInfoType.Font && m_backgroundStackPanel /* prevent calling StampOutRatingItems() twice at initialisation */)
+				if (m_infoType != RatingInfoType.Font && m_backgroundStackPanel  != null /* prevent calling StampOutRatingItems() twice at initialisation */)
 				{
 					m_infoType = RatingInfoType.Font;
 					StampOutRatingItems();
@@ -693,57 +777,57 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 
 			// We don't want to do this for the initial property set
 			// Or if we just stamped them out
-			if (m_backgroundStackPanel && !changedType)
+			if (m_backgroundStackPanel != null && !changedType)
 			{
-				for (int i = 0; i < MaxRating(); i++)
+				for (int i = 0; i < MaxRating; i++)
 				{
-					CustomizeRatingItem(m_backgroundStackPanel.Children().GetAt(i), RatingControlStates.Unset);
-					CustomizeRatingItem(m_foregroundStackPanel.Children().GetAt(i), RatingControlStates.Set);
+					CustomizeRatingItem(m_backgroundStackPanel.Children.ElementAt(i) as UIElement, RatingControlStates.Unset);
+					CustomizeRatingItem(m_foregroundStackPanel.Children.ElementAt(i) as UIElement, RatingControlStates.Set);
 				}
 			}
 
 			UpdateRatingItemsAppearance();
 		}
 
-		void OnMaxRatingChanged(const DependencyPropertyChangedEventArgs& /*args*/)
+		void OnMaxRatingChanged(DependencyPropertyChangedEventArgs args)
 		{
 			StampOutRatingItems();
 		}
 
-		void OnPlaceholderValueChanged(const DependencyPropertyChangedEventArgs& /*args*/)
+		void OnPlaceholderValueChanged(DependencyPropertyChangedEventArgs args)
 		{
 			UpdateRatingItemsAppearance();
 		}
 
-		void OnValueChanged(const DependencyPropertyChangedEventArgs& /*args*/)
+		void OnValueChanged(object sender, DependencyPropertyChangedEventArgs args)
 		{
 			// Fire property change for UIA
-			if (varmationPeer peer = FrameworkElementvarmationPeer.FromElement(this))
+			if (FrameworkElementAutomationPeer.FromElement(this) is RatingControlAutomationPeer ratingPeer)
 			{
-				var ratingPeer = peer.as<RatingControlvarmationPeer>();
-				get_self<RatingControlvarmationPeer>(ratingPeer)->RaisePropertyChangedEvent(Value());
+				// Uno TODO
+				// ratingPeer.RaisePropertyChangedEvent(args.OldValue, args.NewValue);
 			}
 
 			UpdateRatingItemsAppearance();
 		}
 
-		void OnIsEnabledChanged(const IInspectable& /*sender*/, const DependencyPropertyChangedEventArgs& /*args*/)
+		void OnIsEnabledChanged(object sender, DependencyPropertyChangedEventArgs args)
 		{
 			// MSFT 11521414 TODO: change states (add a state)
 			UpdateRatingItemsAppearance();
 		}
 
-		void OnCaptionSizeChanged(const IInspectable& /*sender*/, const SizeChangedEventArgs& /*args*/)
+		void OnCaptionSizeChanged(object sender, SizeChangedEventArgs args)
 		{
 			ResetControlWidth();
 		}
 
-		void OnPointerCancelledBackgroundStackPanel(const IInspectable& /*sender*/, const PointerRoutedEventArgs& args)
+		void OnPointerCancelledBackgroundStackPanel(object sender, PointerRoutedEventArgs args)
 		{
 			PointerExitedImpl(args);
 		}
 
-		void OnPointerCaptureLostBackgroundStackPanel(const IInspectable& /*sender*/, const PointerRoutedEventArgs& args)
+		void OnPointerCaptureLostBackgroundStackPanel(object sender, PointerRoutedEventArgs args)
 		{
 			// We capture the pointer because we want to support the drag off the
 			// left side to clear the rating scenario. However, this means that
@@ -752,50 +836,56 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 			PointerExitedImpl(args, false /* resetScaleAnimation */);
 		}
 
-		void OnPointerMovedOverBackgroundStackPanel(const IInspectable& /*sender*/, const PointerRoutedEventArgs& args)
+		void OnPointerMovedOverBackgroundStackPanel(object sender, PointerRoutedEventArgs args)
 		{
-			if (!IsReadOnly())
+			if (!IsReadOnly)
 			{
 				var point = args.GetCurrentPoint(m_backgroundStackPanel);
-				float xPosition = point.Position().X;
+				var xPosition = point.Position.X;
 				if (SharedHelpers.IsAnimationsEnabled())
 				{
-					m_sharedPointerPropertySet.InsertScalar("starsScaleFocalPoint", xPosition);
-					var deviceType = args.Pointer().PointerDeviceType();
+					_starsScaleFocalPoint = (float)xPosition;
+					m_sharedPointerPropertySet.InsertScalar("starsScaleFocalPoint", (float)xPosition);
+					var deviceType = args.Pointer.PointerDeviceType;
 
 					switch (deviceType)
 					{
 					case PointerDeviceType.Touch:
 						m_sharedPointerPropertySet.InsertScalar("pointerScalar", c_touchOverScale);
+
+						_pointerScalar = c_touchOverScale;
 						break;
 					default: // mouse, TODO: distinguish pen later
 						m_sharedPointerPropertySet.InsertScalar("pointerScalar", c_mouseOverScale);
+
+						_pointerScalar = c_mouseOverScale;
 						break;
 					}
 				}
 
 				m_mousePercentage = (double)(xPosition) / CalculateActualRatingWidth();
 
+				UpdateRatingItemsScales();
 				UpdateRatingItemsAppearance();
-				args.Handled(true);
+				args.Handled = true;
 			}
 		}
 
-		void OnPointerEnteredBackgroundStackPanel(const IInspectable& /*sender*/, const PointerRoutedEventArgs& args)
+		void OnPointerEnteredBackgroundStackPanel(object sender, PointerRoutedEventArgs args)
 		{
-			if (!IsReadOnly())
+			if (!IsReadOnly)
 			{
 				m_isPointerOver = true;
-				args.Handled(true);
+				args.Handled = true;
 			}
 		}
 
-		void OnPointerExitedBackgroundStackPanel(const IInspectable& /*sender*/, const PointerRoutedEventArgs& args)
+		void OnPointerExitedBackgroundStackPanel(object sender, PointerRoutedEventArgs args)
 		{
 			PointerExitedImpl(args);
 		}
 
-		void PointerExitedImpl(const PointerRoutedEventArgs& args, bool resetScaleAnimation)
+		void PointerExitedImpl(PointerRoutedEventArgs args, bool resetScaleAnimation = true)
 		{
 			var point = args.GetCurrentPoint(m_backgroundStackPanel);
 
@@ -808,35 +898,38 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 			{
 				if (resetScaleAnimation)
 				{
+					_starsScaleFocalPoint = c_noPointerOverMagicNumber;
 					m_sharedPointerPropertySet.InsertScalar("starsScaleFocalPoint", c_noPointerOverMagicNumber);
 				}
 				UpdateRatingItemsAppearance();
 			}
 
-			args.Handled(true);
+			args.Handled = true;
+
+			UpdateRatingItemsScales();
 		}
 
-		void OnPointerPressedBackgroundStackPanel(const IInspectable& /*sender*/, const PointerRoutedEventArgs& args)
+		void OnPointerPressedBackgroundStackPanel(object sender, PointerRoutedEventArgs args)
 		{
-			if (!IsReadOnly())
+			if (!IsReadOnly)
 			{
 				m_isPointerDown = true;
 
 				// We capture the pointer on pointer down because we want to support
 				// the drag off the left side to clear the rating scenario.
-				m_backgroundStackPanel.CapturePointer(args.Pointer());
+				m_backgroundStackPanel.CapturePointer(args.Pointer);
 			}
 		}
 
-		void OnPointerReleasedBackgroundStackPanel(const IInspectable& /*sender*/, const PointerRoutedEventArgs& args)
+		void OnPointerReleasedBackgroundStackPanel(object sender, PointerRoutedEventArgs args)
 		{
-			if (!IsReadOnly())
+			if (!IsReadOnly)
 			{
 				var point = args.GetCurrentPoint(m_backgroundStackPanel);
-				var xPosition = point.Position().X;
+				var xPosition = point.Position.X;
 
 				double mousePercentage = xPosition / CalculateActualRatingWidth();
-				SetRatingTo(ceil(mousePercentage * MaxRating()), true);
+				SetRatingTo(Math.Ceiling(mousePercentage * MaxRating), true);
 
 				if (SharedHelpers.IsRS1OrHigher())
 				{
@@ -849,15 +942,21 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 				m_isPointerDown = false;
 				UpdateRatingItemsAppearance();
 			}
+
+
+			_starsScaleFocalPoint = c_noPointerOverMagicNumber;
+			m_sharedPointerPropertySet.InsertScalar("starsScaleFocalPoint", c_noPointerOverMagicNumber);
+
+			UpdateRatingItemsScales();
 		}
 
 		double CalculateTotalRatingControlWidth()
 		{
 			double ratingStarsWidth = CalculateActualRatingWidth();
-			var captionAsWinRT = unbox_value<string>(GetValue(s_CaptionProperty));
+			var captionAsWinRT = Caption;
 			double textSpacing = 0.0;
 
-			if (captionAsWinRT.size() > 0)
+			if (captionAsWinRT?.Length > 0)
 			{
 				// TODO MSFT #10030063: Convert to itemspacing DP
 				textSpacing = c_itemSpacing;
@@ -865,9 +964,9 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 
 			double captionWidth = 0.0;
     
-			if (m_captionTextBlock)
+			if (m_captionTextBlock != null)
 			{
-				captionWidth = m_captionTextBlock.ActualWidth();
+				captionWidth = m_captionTextBlock.ActualWidth;
 			}
 
 			return ratingStarsWidth + textSpacing + captionWidth;
@@ -886,30 +985,30 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 			// TODO: replace hardcoding
 			// MSFT #10030063
 			// (max rating * rating size) + ((max rating - 1) * item spacing)
-			return (MaxRating() * ActualRatingFontSize()) + ((MaxRating() - 1) * c_itemSpacing);
+			return (MaxRating * ActualRatingFontSize()) + ((MaxRating - 1) * c_itemSpacing);
 		}
 
 		// IControlOverrides
-		void OnKeyDown(KeyRoutedEventArgs const& eventArgs)
+		protected override void OnKeyDown(KeyRoutedEventArgs eventArgs)
 		{
-			if (eventArgs.Handled())
+			if (eventArgs.Handled)
 			{
 				return;
 			}
 
-			if (!IsReadOnly())
+			if (!IsReadOnly)
 			{
 				bool handled = false;
-				VirtualKey key = eventArgs.as<KeyRoutedEventArgs>().Key();
+				VirtualKey key = eventArgs.Key;
       
 				double flowDirectionReverser = 1.0;
 
-				if (FlowDirection() == FlowDirection.RightToLeft)
+				if (FlowDirection == FlowDirection.RightToLeft)
 				{
 					flowDirectionReverser *= -1.0;
 				}
 
-				var originalKey = eventArgs.as<KeyRoutedEventArgs>().OriginalKey();
+				var originalKey = eventArgs.OriginalKey;
 
 				// Up down are right/left in keyboard only
 				if (originalKey == VirtualKey.Up)
@@ -947,17 +1046,17 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 					handled = true;
 					break;
 				case VirtualKey.End:
-					SetRatingTo((double)(MaxRating()), false);
+					SetRatingTo((double)(MaxRating), false);
 					handled = true;
 					break;
 				default:
 					break;
 				}
 
-				eventArgs.Handled(handled);
+				eventArgs.Handled = handled;
 			}
 
-			__super.OnKeyDown(eventArgs);
+			base.OnKeyDown(eventArgs);
 		}
 
 		// We use the same engagement model as Slider/sorta like ComboBox
@@ -975,69 +1074,69 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 		// PreviewKey subscribed events
 		// [regular key events]
 
-		void OnPreviewKeyDown(KeyRoutedEventArgs const& eventArgs)
+		protected override void OnPreviewKeyDown(KeyRoutedEventArgs eventArgs)
 		{
-			if (eventArgs.Handled())
+			if (eventArgs.Handled)
 			{
 				return ;
 			}
 
-			if (!IsReadOnly() && IsFocusEngaged() && IsFocusEngagementEnabled())
+			if (!IsReadOnly && IsFocusEngaged && IsFocusEngagementEnabled)
 			{
-				var originalKey = eventArgs.as<KeyRoutedEventArgs>().OriginalKey();
+				var originalKey = eventArgs.OriginalKey;
 				if (originalKey == VirtualKey.GamepadA)
 				{
 					m_shouldDiscardValue = false;
 					m_preEngagementValue = -1.0;
 					RemoveFocusEngagement();
 					m_disengagedWithA = true;
-					eventArgs.Handled(true);
+					eventArgs.Handled = true;
 				}
 				else if (originalKey == VirtualKey.GamepadB)
 				{
 					bool valueChanged = false;
 					m_shouldDiscardValue = false;
 
-					if (Value() != m_preEngagementValue)
+					if (Value != m_preEngagementValue)
 					{
 						valueChanged = true;
 					}
 
-					Value(m_preEngagementValue);
+					Value = m_preEngagementValue;
 
 					if (valueChanged)
 					{
-						m_valueChangedEventSource(this, null);
+						RaiseValueChanged();
 					}
 
 					m_preEngagementValue = -1.0;
 					RemoveFocusEngagement();
-					eventArgs.Handled(true);
+					eventArgs.Handled = true;
 				}
 			}
 		}
 
-		void OnPreviewKeyUp(KeyRoutedEventArgs const& eventArgs)
+		protected override void OnPreviewKeyUp(KeyRoutedEventArgs eventArgs)
 		{
-			var originalKey = eventArgs.as<KeyRoutedEventArgs>().OriginalKey();
+			var originalKey = eventArgs.OriginalKey;
 
-			if (IsFocusEngagementEnabled() && originalKey == VirtualKey.GamepadA && m_disengagedWithA)
+			if (IsFocusEngagementEnabled && originalKey == VirtualKey.GamepadA && m_disengagedWithA)
 			{
 				// Block the re-engagement
 				m_disengagedWithA = false; // We want to do this regardless of handled
-				eventArgs.Handled(true);
+				eventArgs.Handled = true;
 			}
 		}
 
-		void OnFocusEngaged(const Control& /*sender*/, const FocusEngagedEventArgs& /*args*/)
+		void OnFocusEngaged(Control sender, FocusEngagedEventArgs args)
 		{
-			if (!IsReadOnly())
+			if (!IsReadOnly)
 			{
 				EnterGamepadEngagementMode();
 			}
 		}
 
-		void OnFocusDisengaged(const Control& /*sender*/, const FocusDisengagedEventArgs& /*args*/)
+		void OnFocusDisengaged(Control sender, FocusDisengagedEventArgs args)
 		{
 			// Revert value:
 			// for catching programmatic disengagements, gamepad ones are handled in OnPreviewKeyDown
@@ -1045,17 +1144,17 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 			{
 				bool valueChanged = false;
 
-				if (Value() != m_preEngagementValue)
+				if (Value != m_preEngagementValue)
 				{
 					valueChanged = true;
 				}
 
-				Value(m_preEngagementValue);
+				Value = m_preEngagementValue;
 				m_preEngagementValue = -1.0f;
 
 				if (valueChanged)
 				{
-					m_valueChangedEventSource(this, null);
+					RaiseValueChanged();
 				}
 			}
 
@@ -1064,20 +1163,20 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 
 		void EnterGamepadEngagementMode()
 		{
-			double currentValue = Value();
+			double currentValue = Value;
 			m_shouldDiscardValue = true;
 
 			if (currentValue == c_noValueSetSentinel)
 			{
-				Value(InitialSetValue());
+				Value = InitialSetValue;
 				// Notify that the Value has changed
-				m_valueChangedEventSource(this, null);
-				currentValue = InitialSetValue();
+				RaiseValueChanged();
+				currentValue = InitialSetValue;
 				m_preEngagementValue = -1;
 			}
 			else
 			{
-				currentValue = Value();
+				currentValue = Value;
 				m_preEngagementValue = currentValue;
 			}
 
@@ -1104,78 +1203,26 @@ namespace SamplesApp.Samples.WinUI.RatingControl
 			m_disengagedWithA = false;
 		}
 
-		void RecycleEvents(bool useSafeGet)
+		void RecycleEvents()
 		{
-			if (var backgroundStackPanel = m_backgroundStackPanel.safe_get(useSafeGet))
-			{
-				if (m_pointerCancelledToken.value)
-				{
-					backgroundStackPanel.PointerCanceled(m_pointerCancelledToken);
-					m_pointerCancelledToken.value = 0;
-				}
-
-				if (m_pointerCaptureLostToken.value)
-				{
-					backgroundStackPanel.PointerCaptureLost(m_pointerCaptureLostToken);
-					m_pointerCaptureLostToken.value = 0;
-				}
-
-				if (m_pointerMovedToken.value)
-				{
-					backgroundStackPanel.PointerMoved(m_pointerMovedToken);
-					m_pointerMovedToken.value = 0;
-				}
-
-				if (m_pointerEnteredToken.value)
-				{
-					backgroundStackPanel.PointerEntered(m_pointerEnteredToken);
-					m_pointerEnteredToken.value = 0;
-				}
-
-				if (m_pointerExitedToken.value)
-				{
-					backgroundStackPanel.PointerExited(m_pointerExitedToken);
-					m_pointerExitedToken.value = 0;
-				}
-
-				if (m_pointerPressedToken.value)
-				{
-					backgroundStackPanel.PointerPressed(m_pointerPressedToken);
-					m_pointerPressedToken.value = 0;
-				}
-
-				if (m_pointerReleasedToken.value)
-				{
-					backgroundStackPanel.PointerReleased(m_pointerReleasedToken);
-					m_pointerReleasedToken.value = 0;
-				}
-			}
-
-			if (var captionTextBlock = m_captionTextBlock.safe_get(useSafeGet))
-			{
-				if (m_captionSizeChangedToken.value)
-				{
-					captionTextBlock.SizeChanged(m_captionSizeChangedToken);
-					m_captionSizeChangedToken.value = 0;
-				}
-			}
+			_subscriptions.Disposable = null;
 		}
 
-		void OnTextScaleFactorChanged(const UISettings& setting, const IInspectable& args)
+		void OnTextScaleFactorChanged(UISettings setting, object args)
 		{
 			// OnTextScaleFactorChanged happens in non-UI thread, use dispatcher to call StampOutRatingItems in UI thread.
-			var strongThis = get_strong();
-			m_dispatcherHelper.RunAsync([strongThis]()
-			{
-				strongThis->StampOutRatingItems();
-			});
-    
-		}
+			Dispatcher.RunAsync(
+				Core.CoreDispatcherPriority.Normal,
+				() =>
+				{
+					StampOutRatingItems();
+				}
+			);
+   		}
 
 		UISettings GetUISettings()
 		{
-			static UISettings uiSettings = UISettings();
-			return uiSettings;
+			return new UISettings();
 		}
     }
 }

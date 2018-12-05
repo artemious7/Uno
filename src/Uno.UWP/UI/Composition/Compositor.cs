@@ -45,5 +45,10 @@ namespace Windows.UI.Composition
 		{
 			return new CompositionScopedBatch(batchType);
 		}
+
+		public global::Windows.UI.Composition.CompositionPropertySet CreatePropertySet()
+		{
+			return new CompositionPropertySet();
+		}
 	}
 }

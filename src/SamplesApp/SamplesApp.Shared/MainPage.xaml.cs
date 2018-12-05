@@ -37,5 +37,10 @@ namespace SamplesApp
 		{
 			Frame.Navigate(typeof(Samples.UnitTests.UnitTestsPage));
 		}
+
+		private void OnRatingControl(object sender, RoutedEventArgs e)
+		{
+			Frame.Navigate(typeof(Samples.RatingControlSample.RatingControlPage));
+		}
 	}
 }

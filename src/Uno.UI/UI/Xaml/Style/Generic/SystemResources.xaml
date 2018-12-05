@@ -32,6 +32,8 @@
 	<FontFamily x:Key="PivotHeaderItemFontFamily">XamlAutoFontFamily</FontFamily>
 	<FontFamily x:Key="PivotTitleFontFamily">XamlAutoFontFamily</FontFamily>
 	<FontFamily x:Key="SettingsFlyoutHeaderThemeFontFamily">XamlAutoFontFamily</FontFamily>
+
+	<x:Boolean x:Key="UseSystemFocusVisuals">true</x:Boolean>
 	
 	<!-- 
 	The defaults styles map to symbol codes from this open-source font

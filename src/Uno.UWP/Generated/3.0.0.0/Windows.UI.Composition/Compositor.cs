@@ -125,13 +125,6 @@ namespace Windows.UI.Composition
 		#endif
 		#if __ANDROID__ || __IOS__ || NET46 || __WASM__ || __MACOS__
 		[global::Uno.NotImplemented]
-		public  global::Windows.UI.Composition.CompositionPropertySet CreatePropertySet()
-		{
-			throw new global::System.NotImplementedException("The member CompositionPropertySet Compositor.CreatePropertySet() is not implemented in Uno.");
-		}
-		#endif
-		#if __ANDROID__ || __IOS__ || NET46 || __WASM__ || __MACOS__
-		[global::Uno.NotImplemented]
 		public  global::Windows.UI.Composition.QuaternionKeyFrameAnimation CreateQuaternionKeyFrameAnimation()
 		{
 			throw new global::System.NotImplementedException("The member QuaternionKeyFrameAnimation Compositor.CreateQuaternionKeyFrameAnimation() is not implemented in Uno.");

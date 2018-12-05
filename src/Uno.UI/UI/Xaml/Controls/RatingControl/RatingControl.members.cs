@@ -5,9 +5,9 @@ using Windows.UI.Composition;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 
-namespace SamplesApp.Samples.WinUI.RatingControl
+namespace Windows.UI.Xaml.Controls
 {
-	partial class RatingControl : Control
+	partial class RatingControl
     {
 		TextBlock m_captionTextBlock;
 
