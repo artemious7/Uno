@@ -39,6 +39,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Samples\UnitTests\UnitTestsPage.xaml.cs">
       <DependentUpon>UnitTestsPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="$(MSBuildThisFileDirectory)Samples\WinUI\RatingControl\RatingControl.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Samples\WinUI\RatingControl\RatingControl.members.cs" />
   </ItemGroup>
   <ItemGroup>
     <Page Include="$(MSBuildThisFileDirectory)MainPage.xaml">
