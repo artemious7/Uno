@@ -39,7 +39,8 @@
  * Adjust .NET template projects versions to 4.6.1
  * Adjust Microsoft.CodeAnalysis versions to avoid restore conflicts
  * Fix element name matching existing types fails to compile (e.g. ContentPresenter)
- * 138735 [Android] Fixed broken DatePicker 
+ * 138735 [Android] Fixed broken DatePicker
+ * 138537 [iOS] App freezes after State selection causing infinite load on every subsequent launch
 
 ## Release 1.42
 
