@@ -450,7 +450,8 @@ namespace <#= mixin.NamespaceName #>
 					SizeChanged?.Invoke(this, new SizeChangedEventArgs(previousSize, _actualSize));
 
 #if <#= mixin.IsFrameworkElement #>
-					if (Superview != null && !(Superview is DependencyObject))
+					// Require measurement from CommandBar elements just cause apps to crash
+					if (Superview != null && !(Superview is DependencyObject) && !(Superview is UINavigationBar))
 					{
 						// If this FrameworkElement has a native parent, then it probably wasn't measured prior to having its Frame changed.
 						// Set RequiresMeasure flag so that this branch of the visual tree will be measured before being arranged, this is
