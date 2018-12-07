@@ -365,6 +365,13 @@
 		<PRIResource Include="Resources\Strings\**\*.resw" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <UpToDateCheckInput Remove="Helpers\WinUI\ResourceAccessor.cs" />
+	  <UpToDateCheckInput Remove="Helpers\WinUI\Utils.cs" />
+	  <UpToDateCheckInput Remove="UI\Xaml\Controls\NavigationView\NavigationView.Members.cs" />
+	  <UpToDateCheckInput Remove="UI\Xaml\Controls\NavigationView\NavigationViewHelper.cs" />
+	</ItemGroup>
+
 	<Target Name="BuildManualDependencies" BeforeTargets="_UnoSourceGenerator" Condition="!Exists($(T4Bin))">
 		<Message Text="Building Generators" Importance="high" />
 		<!-- This is required because the non-reference dependencies are not properly handled -->
