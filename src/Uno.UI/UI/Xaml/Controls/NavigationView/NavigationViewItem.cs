@@ -17,6 +17,19 @@ namespace Windows.UI.Xaml.Controls
 		public double CompactPaneLength
 			=> (double)GetValue(CompactPaneLengthProperty);
 
+		public bool SelectsOnInvoked
+		{
+			get => (bool)GetValue(SelectsOnInvokedProperty);
+			set => SetValue(SelectsOnInvokedProperty, value);
+		}
+
+		[global::Uno.NotImplemented]
+		public static global::Windows.UI.Xaml.DependencyProperty SelectsOnInvokedProperty { get; } =
+		Windows.UI.Xaml.DependencyProperty.Register(
+			"SelectsOnInvoked", typeof(bool),
+			typeof(global::Windows.UI.Xaml.Controls.NavigationViewItem),
+			new FrameworkPropertyMetadata(default(bool)));
+
 		public static global::Windows.UI.Xaml.DependencyProperty CompactPaneLengthProperty { get; } =
 		Windows.UI.Xaml.DependencyProperty.Register(
 			"CompactPaneLength", typeof(double),

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Uno.Disposables;
+using Windows.UI.ViewManagement;
 
 namespace Windows.UI.Xaml.Controls
 {
@@ -24,6 +25,11 @@ namespace Windows.UI.Xaml.Controls
 			FromRight, // SlideNavigationTransitionInfo
 			Default // Currently it's mapping to EntranceNavigationTransitionInfo and is subject to change.
 		};
+
+		// Cache these objects for the view as they are expensive to query via GetForCurrentView() calls.
+		ApplicationView m_applicationView = null;
+		UIViewSettings m_uiViewSettings = null;
+
 
 		// Visual components
 		Button m_paneToggleButton;
@@ -79,7 +85,7 @@ namespace Windows.UI.Xaml.Controls
 		//winrt::SplitView::PaneClosing_revoker m_splitViewPaneClosingRevoker =;
 		//winrt::SplitView::PaneOpened_revoker m_splitViewPaneOpenedRevoker =;
 		//winrt::SplitView::PaneOpening_revoker m_splitViewPaneOpeningRevoker =;
-		CompositeDisposable m_layoutUpdatedToken = new CompositeDisposable();
+		SerialDisposable m_layoutUpdatedToken = new CompositeDisposable();
 		//winrt::UIElement::AccessKeyInvoked_revoker m_accessKeyInvokedRevoker =;
 
 		bool m_wasForceClosed = false;
@@ -114,7 +120,7 @@ namespace Windows.UI.Xaml.Controls
 		TopNavigationViewLayoutState m_topNavigationMode = TopNavigationViewLayoutState.InitStep1;
 
 		// A threshold to stop recovery from overflow to normal happens immediately on resize.
-		float m_topNavigationRecoveryGracePeriodWidth = 5.f;
+		double m_topNavigationRecoveryGracePeriodWidth = 5.0;
 
 		// Avoid layout cycle on InitStep2
 		int m_measureOnInitStep2Count = 0;

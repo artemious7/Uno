@@ -13,5 +13,15 @@ namespace Windows.UI.Xaml.Controls
 		{
 			get; internal set;
 		}
+
+		public global::Windows.UI.Xaml.Media.Animation.NavigationTransitionInfo RecommendedNavigationTransitionInfo
+		{
+			get; internal set;
+		}
+
+		public global::Windows.UI.Xaml.Controls.NavigationViewItemBase SelectedItemContainer
+		{
+			get; internal set;
+		}
 	}
 }

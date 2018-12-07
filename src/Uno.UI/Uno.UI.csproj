@@ -370,6 +370,8 @@
 	  <UpToDateCheckInput Remove="Helpers\WinUI\Utils.cs" />
 	  <UpToDateCheckInput Remove="UI\Xaml\Controls\NavigationView\NavigationView.Members.cs" />
 	  <UpToDateCheckInput Remove="UI\Xaml\Controls\NavigationView\NavigationViewHelper.cs" />
+	  <UpToDateCheckInput Remove="UI\Xaml\Controls\NavigationView\NavigationViewTemplateSettings.cs" />
+	  <UpToDateCheckInput Remove="UI\Xaml\Controls\NavigationView\TopNavigationViewDataProvider.cs" />
 	</ItemGroup>
 
 	<Target Name="BuildManualDependencies" BeforeTargets="_UnoSourceGenerator" Condition="!Exists($(T4Bin))">

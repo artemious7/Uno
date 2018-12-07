@@ -15,8 +15,10 @@ using Windows.UI.Composition;
 using Windows.UI.Core;
 using Windows.UI.Xaml.Automation;
 using Windows.UI.Xaml.Automation.Peers;
+using Windows.UI.Xaml.Data;
 using Windows.UI.Xaml.Hosting;
 using Windows.UI.Xaml.Input;
+using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Media.Animation;
 
 namespace Windows.UI.Xaml.Controls
@@ -75,43 +77,11 @@ namespace Windows.UI.Xaml.Controls
 
 		~NavigationView()
 		{
-			UnhookEventsAndClearFields(true);
+
 		}
 
-		void UnhookEventsAndClearFields(bool isFromDestructor)
+		void UnhookEventsAndClearFields(bool isFromDestructor = false)
 		{
-			m_titleBarMetricsChangedRevoker.revoke();
-			m_titleBarIsVisibleChangedRevoker.revoke();
-			m_paneToggleButtonClickRevoker.revoke();
-
-			m_settingsItemTappedRevoker.revoke();
-			m_settingsItemKeyDownRevoker.revoke();
-			m_settingsItemKeyUpRevoker.revoke();
-			m_settingsItem = null);
-
-			m_leftNavListViewSelectionChangedRevoker.revoke();
-			m_leftNavListViewItemClickRevoker.revoke();
-			m_leftNavListViewLoadedRevoker.revoke();       
-			m_leftNavListView = null);
-
-			m_leftNavListViewSelectionChangedRevoker.revoke();
-			m_leftNavListViewItemClickRevoker.revoke();
-			m_leftNavListViewLoadedRevoker.revoke();      
-			m_leftNavListView = null);
-
-			m_topNavListViewSelectionChangedRevoker.revoke();
-			m_topNavListViewItemClickRevoker.revoke();
-			m_topNavListViewLoadedRevoker.revoke();
-			m_topNavListView = null);
-
-			m_topNavListOverflowViewSelectionChangedRevoker.revoke();
-			m_topNavListOverflowView = null);
-
-			m_paneSearchButtonClickRevoker.revoke();
-			m_paneSearchButton = null);
-
-			m_buttonHolderGettingFocusRevoker.revoke();
-			m_buttonHolderGrid = null);
 		}
 
 		public NavigationView()
@@ -168,9 +138,9 @@ namespace Windows.UI.Xaml.Controls
 				if (SharedHelpers.IsRS3OrHigher())
 				{
 					KeyboardAccelerator keyboardAccelerator = new KeyboardAccelerator();
-					keyboardAccelerator.Key(VirtualKey.Back);
-					keyboardAccelerator.Modifiers(VirtualKeyModifiers.Windows);
-					paneToggleButton.KeyboardAccelerators().Append(keyboardAccelerator);
+					keyboardAccelerator.Key = VirtualKey.Back);
+					keyboardAccelerator.Modifiers = VirtualKeyModifiers.Windows;
+					paneToggleButton.KeyboardAccelerators.Append(keyboardAccelerator);
 				}
 			}
 
@@ -179,12 +149,12 @@ namespace Windows.UI.Xaml.Controls
 				m_leftNavPaneHeaderContentBorder = leftNavPaneHeaderContentBorder;
 			}
 
-			if (GetTemplateChild(c_leftNavPaneCustomContentBorder) is Content leftNavPaneCustomContentBorder)
+			if (GetTemplateChild(c_leftNavPaneCustomContentBorder) is ContentControl leftNavPaneCustomContentBorder)
 			{
 				m_leftNavPaneCustomContentBorder = leftNavPaneCustomContentBorder;
 			}
 
-			if (GetTemplateChild(c_leftNavFooterContentBorder) is Content leftNavFooterContentBorder)
+			if (GetTemplateChild(c_leftNavFooterContentBorder) is ContentControl leftNavFooterContentBorder)
 			{
 				m_leftNavFooterContentBorder = leftNavFooterContentBorder;
 			}
@@ -214,11 +184,11 @@ namespace Windows.UI.Xaml.Controls
 			if (GetTemplateChild(c_rootSplitViewName) is SplitView splitView)
 			{
 				m_rootSplitView = splitView;
-				var splitViewIsPaneOpenChangedRevoker = RegisterPropertyChangedCallback(splitView,
+				var splitViewIsPaneOpenChangedRevoker = splitView.RegisterPropertyChangedCallback(
 					SplitView.IsPaneOpenProperty, 
 					OnSplitViewClosedCompactChanged);
 
-				var splitViewDisplayModeChangedRevoker = RegisterPropertyChangedCallback(splitView,
+				var splitViewDisplayModeChangedRevoker = splitView.RegisterPropertyChangedCallback(
 					SplitView.DisplayModeProperty, 
 					OnSplitViewClosedCompactChanged);
 
@@ -298,7 +268,7 @@ namespace Windows.UI.Xaml.Controls
 			}
 
 			// Get pointer to the pane content area, for use in the selection indicator animation
-			m_paneContentGrid = GetTemplateChild(c_paneContentGridName)) as UIElement;
+			m_paneContentGrid = GetTemplateChild(c_paneContentGridName) as UIElement;
 
 			// Set automation name on search button
 			if (GetTemplateChild(c_searchButtonName) is Button button)
@@ -308,9 +278,12 @@ namespace Windows.UI.Xaml.Controls
 
 				var searchButtonName = ResourceAccessor.GetLocalizedStringResource("NavigationViewSearchButtonName");
 				AutomationProperties.SetName(button, searchButtonName);
+
+#if !IS_UNO // UNO TODO Missing Tooltop
 				var toolTip = ToolTip;
 				toolTip.Content = searchButtonName;
 				ToolTipService.SetToolTip(button, toolTip);
+#endif
 			}
 
 			if (GetTemplateChild(c_navViewBackButton) is Button backButton)
@@ -318,13 +291,13 @@ namespace Windows.UI.Xaml.Controls
 				m_backButton = backButton;
 				backButton.Click += OnBackButtonClicked;
         
-				string navigationName = ResourceAccessor.GetLocalizedStringResource(SR_NavigationBackButtonName);
+				string navigationName = ResourceAccessor.GetLocalizedStringResource("NavigationBackButtonName");
 				AutomationProperties.SetName(backButton, navigationName);
 			}
 
 			if (GetTemplateChild(c_navViewBackButtonToolTip) is ToolTip backButtonToolTip)
 			{
-				string navigationBackButtonToolTip = ResourceAccessor.GetLocalizedStringResource(SR_NavigationBackButtonToolTip);
+				string navigationBackButtonToolTip = ResourceAccessor.GetLocalizedStringResource("NavigationBackButtonToolTip");
 				backButtonToolTip.Content =  navigationBackButtonToolTip;
 			}
 
@@ -381,7 +354,7 @@ namespace Windows.UI.Xaml.Controls
 		void CreateAndHookEventsToSettings(string settingsName)
 		{
 			var settingsItem = GetTemplateChild(settingsName) as NavigationViewItem;
-			if (settingsItem && settingsItem != m_settingsItem)
+			if (settingsItem != null && settingsItem != m_settingsItem)
 			 {
 				// If the old settings item is selected, move the selection to the new one.
 				var selectedItem = SelectedItem;
@@ -461,19 +434,19 @@ namespace Windows.UI.Xaml.Controls
 							{
 								RequestInvalidateMeasureOnNextLayoutUpdate();
 							}
-			#if DEBUG
+#if DEBUG
 							if (m_topDataProvider.Size() > 0)
 							{
 								// We should always have at least one item in primary.
 								global::System.Diagnostics.Debug.Assert(m_topDataProvider.GetPrimaryItems().Size() > 0);
 							}
-			#endif // DEBUG
+#endif // DEBUG
 						}
 					}
 
-					m_layoutUpdatedToken.Dispose = null;
-					m_layoutUpdatedToken = LayoutUpdated += OnLayoutUpdated;
-					m_layoutUpdatedToken.Dispose = Disposable.Create(() => LayoutUpdated -= OnLayoutUpdated); ;
+					m_layoutUpdatedToken.Disposable = null;
+					LayoutUpdated += OnLayoutUpdated;
+					m_layoutUpdatedToken.Disposable = Disposable.Create(() => LayoutUpdated -= OnLayoutUpdated); ;
 				}
 				finally
 				{
@@ -491,7 +464,7 @@ namespace Windows.UI.Xaml.Controls
 		void OnLayoutUpdated(object sender, object e)
 		{
 			// We only need to handle once after MeasureOverride, so revoke the token.
-			m_layoutUpdatedToken.Dispose = null;
+			m_layoutUpdatedToken.Disposable = null;
 
 			if (m_shouldInvalidateMeasureOnNextLayoutUpdate)
 			{
@@ -503,12 +476,12 @@ namespace Windows.UI.Xaml.Controls
 				// For some unknown reason, ListView may not always selected a item on the first time when we update the datasource.
 				// If it's not selected, we re-selected it.
 				var selectedItem = SelectedItem;
-				if (selectedItem)
+				if (selectedItem != null)
 				{
 					var container = NavigationViewItemOrSettingsContentFromData(selectedItem);
-					if (container && !container.IsSelected() && container.SelectsOnInvoked())
+					if (container != null && !container.IsSelected && container.SelectsOnInvoked)
 					{
-						container.IsSelected(true);
+						container.IsSelected = true;
 
 					}
 				}
@@ -536,7 +509,7 @@ namespace Windows.UI.Xaml.Controls
 		}
 
 		// forceSetDisplayMode: On first call to SetDisplayMode, force setting to initial values
-		void UpdateAdaptiveLayout(double width, bool forceSetDisplayMode)
+		void UpdateAdaptiveLayout(double width, bool forceSetDisplayMode = false)
 		{
 			// In top nav, there is no adaptive pane layout
 			if (IsTopNavigationView())
@@ -544,7 +517,7 @@ namespace Windows.UI.Xaml.Controls
 				return;
 			}
 
-			if (!m_rootSplitView)
+			if (m_rootSplitView == null)
 			{
 				return;
 			}
@@ -643,7 +616,7 @@ namespace Windows.UI.Xaml.Controls
 			try
 			{
 				m_isOpenPaneForInteraction = true;
-				IsPaneOpen(true);
+				IsPaneOpen = true;
 			}
 			finally
 			{
@@ -657,7 +630,7 @@ namespace Windows.UI.Xaml.Controls
 			try
 			{
 				m_isOpenPaneForInteraction = true;
-				IsPaneOpen(false); // the SplitView is two-way bound to this value
+				IsPaneOpen = false; // the SplitView is two-way bound to this value
 			}
 			finally
 			{
@@ -675,7 +648,7 @@ namespace Windows.UI.Xaml.Controls
 			{
 				var eventArgs = new NavigationViewPaneClosingEventArgs()
 				OnPaneClosingEventSource(this, eventArgs);
-				pendingPaneClosingCancel = eventArgs.Cancel();
+				pendingPaneClosingCancel = eventArgs.Cancel;
 			}
 
 			if (!pendingPaneClosingCancel || m_wasForceClosed)
@@ -709,7 +682,7 @@ namespace Windows.UI.Xaml.Controls
 			{
 				if (!m_blockNextClosingEvent) // If this is true, we already sent one out "manually" and don't need to forward SplitView's event
 				{
-					var eventArgs = make_self<NavigationViewPaneClosingEventArgs>();
+					var eventArgs = new NavigationViewPaneClosingEventArgs();
 					eventArgs.SplitViewClosingArgs(args);
 					m_paneClosingEventSource(this, *eventArgs);
 					pendingPaneClosingCancel = eventArgs.Cancel();
@@ -752,12 +725,12 @@ namespace Windows.UI.Xaml.Controls
 				VisualStateManager.GoToState(this, "ListSizeFull", true /*useTransitions*/);
 			}
 
-			m_paneOpeningEventSource(this, null);
+			OnPaneOpeningEventSource(this, null);
 		}
 
 		void UpdateIsClosedCompact()
 		{
-			var splitView = m_rootSplitView
+			var splitView = m_rootSplitView;
 			if (splitView != null)
 			{
 				// Check if the pane is closed and if the splitview is in either compact mode.
@@ -813,7 +786,7 @@ namespace Windows.UI.Xaml.Controls
 			var splitView = m_rootSplitView;
 			if (splitView != null)
 			{
-				return splitView.DisplayMode() != SplitViewDisplayMode.Inline && splitView.DisplayMode() != SplitViewDisplayMode.CompactInline;
+				return splitView.DisplayMode != SplitViewDisplayMode.Inline && splitView.DisplayMode != SplitViewDisplayMode.CompactInline;
 			}
 			else
 			{
@@ -823,7 +796,7 @@ namespace Windows.UI.Xaml.Controls
 
 		bool ShouldShowBackButton()
 		{
-			if (m_backButton && !ShouldPreserveNavigationViewRS3Behavior())
+			if (m_backButton != null && !ShouldPreserveNavigationViewRS3Behavior())
 			{
 				if (DisplayMode == NavigationViewDisplayMode.Minimal && IsPaneOpen)
 				{
@@ -855,9 +828,11 @@ namespace Windows.UI.Xaml.Controls
 			if (paneToggleButton != null)
 			{
 				AutomationProperties.SetName(paneToggleButton, navigationName);
+#if !IS_UNO
 				var toolTip = ToolTip;
 				toolTip.Content = navigationName;
 				ToolTipService.SetToolTip(paneToggleButton, toolTip);
+#endif
 			}
 		}
 
@@ -919,7 +894,7 @@ namespace Windows.UI.Xaml.Controls
 			{
 				RaiseItemInvoked(settingsItem, true /*isSettings*/);
 			}
-			else if (settingsItem)
+			else if (settingsItem != null)
 			{
 				SetSelectedItemAndExpectItemInvokeWhenSelectionChangedIfNotInvokedFromAPI(settingsItem);
 			}
@@ -932,7 +907,7 @@ namespace Windows.UI.Xaml.Controls
 
 		void AnimateSelectionChangedToItem(object selectedItem)
 		{
-			if (selectedItem && !IsSelectionSuppressed(selectedItem))
+			if (selectedItem != null && !IsSelectionSuppressed(selectedItem))
 			{
 				AnimateSelectionChanged(null /* prevItem */, selectedItem);
 			}
@@ -951,9 +926,9 @@ namespace Windows.UI.Xaml.Controls
 			// If the selected target is not the same, abort the first animation and launch another animation.
 			if (m_prevIndicator != null || m_nextIndicator != null) // There is ongoing animation
 			{
-				if (nextIndicator && m_nextIndicator == nextIndicator) // animate to the same target, just wait for animation complete
+				if (nextIndicator != null && m_nextIndicator == nextIndicator) // animate to the same target, just wait for animation complete
 				{
-					if (prevIndicator && prevIndicator != m_prevIndicator)
+					if (prevIndicator != null && prevIndicator != m_prevIndicator)
 					{
 						ResetElementAnimationProperties(prevIndicator, 0.0f);
 					}
@@ -999,12 +974,12 @@ namespace Windows.UI.Xaml.Controls
 					CompositionScopedBatch scopedBatch = visual.Compositor.CreateScopedBatch(CompositionBatchTypes.Animation);
 
 					// Play the animation on both the previous and next indicators
-					PlayIndicatorAnimations(prevIndicator, 0, nextPos - prevPos, true);
-					PlayIndicatorAnimations(nextIndicator, prevPos - nextPos, 0, false);
+					PlayIndicatorAnimations(prevIndicator, 0, (float)(nextPos - prevPos), true);
+					PlayIndicatorAnimations(nextIndicator, (float)(prevPos - nextPos), 0, false);
 
 					scopedBatch.End();
-					m_prevIndicator = prevIndicator);
-					m_nextIndicator = nextIndicator);
+					m_prevIndicator = prevIndicator;
+					m_nextIndicator = nextIndicator;
 
 					scopedBatch.Completed +=
 						(object sender, CompositionBatchCompletedEventArgs args) =>
@@ -1032,13 +1007,13 @@ namespace Windows.UI.Xaml.Controls
 			}
 		}
 
-		void PlayIndicatorAnimations(UIElement indicator, float from, float to, bool isOutgoing)
+		void PlayIndicatorAnimations(UIElement indicator, float from, double to, bool isOutgoing)
 		{
 			Visual visual = ElementCompositionPreview.GetElementVisual(indicator);
 			Compositor comp = visual.Compositor;
 
 			Size size = indicator.RenderSize;
-			float dimension = IsTopNavigationView() ? size.Width : size.Height;
+			double dimension = IsTopNavigationView() ? size.Width : size.Height;
 
 			StepEasingFunction singleStep = comp.CreateStepEasingFunction();
 			singleStep.IsFinalStepSingleFrame = true;
@@ -1089,11 +1064,11 @@ namespace Windows.UI.Xaml.Controls
 		{
 			var indicator = m_prevIndicator;
 			ResetElementAnimationProperties(indicator, 0.0f);
-			m_prevIndicator = null);
+			m_prevIndicator = null;
 
 			indicator = m_nextIndicator;
 			ResetElementAnimationProperties(indicator, 1.0f);
-			m_nextIndicator = null);
+			m_nextIndicator = null;
 		}
 
 		void ResetElementAnimationProperties(UIElement element, float desiredOpacity)
@@ -1130,7 +1105,7 @@ namespace Windows.UI.Xaml.Controls
 				var nvi = NavigationViewItemOrSettingsContentFromData(item);
 				if (nvi != null)
 				{
-					return !nvi.SelectsOnInvoked();
+					return !nvi.SelectsOnInvoked;
 				}
 			}
 
@@ -1204,7 +1179,7 @@ namespace Windows.UI.Xaml.Controls
 					// check:
 					if (prevItem is NavigationViewItem itemAsNVI)
 					{
-						itemAsNVI.IsSelected(true);
+						itemAsNVI.IsSelected = true;
 					}
 				}
 				else
@@ -1229,7 +1204,7 @@ namespace Windows.UI.Xaml.Controls
 					if (args.AddedItems.Count > 0)
 					{
 						var nextItem = args.AddedItems[0];
-						if (nextItem)
+						if (nextItem != null)
 						{
 							CloseTopNavigationViewFlyout();
 
@@ -1250,30 +1225,32 @@ namespace Windows.UI.Xaml.Controls
 					m_selectionChangeFromOverflowMenu = false;
 				}
 			}
+		}
 
-			void RaiseSelectionChangedEvent(object nextItem, bool isSettingsItem, NavigationRecommendedTransitionDirection recommendedDirection)
+		void RaiseSelectionChangedEvent(object nextItem, bool isSettingsItem, NavigationRecommendedTransitionDirection recommendedDirection)
+		{
+			var eventArgs = new NavigationViewSelectionChangedEventArgs();
+			eventArgs.SelectedItem = nextItem;
+			eventArgs.IsSettingsSelected = isSettingsItem;
+
+			var container = NavigationViewItemBaseOrSettingsContentFromData(nextItem);
+			if (container != null)
 			{
-				var eventArgs = new NavigationViewSelectionChangedEventArgs();
-				eventArgs.SelectedItem = nextItem;
-				eventArgs.IsSettingsSelected = isSettingsItem;
-
-				var container = NavigationViewItemBaseOrSettingsContentFromData(nextItem);
-				if (container != null)
-				{
-					eventArgs.SelectedItemContainer = container;
-				}
-				eventArgs.RecommendedNavigationTransitionInfo(CreateNavigationTransitionInfo(recommendedDirection));
-				OnSelectionChangedEventSource(this, eventArgs);
+				eventArgs.SelectedItemContainer = container;
 			}
+			eventArgs.RecommendedNavigationTransitionInfo = CreateNavigationTransitionInfo(recommendedDirection);
+			OnSelectionChangedEventSource(this, eventArgs);
+		}
 
-			// SelectedItem change can be invoked by API or user's action like clicking. if it's not from API, m_shouldRaiseInvokeItemInSelectionChange would be true
-			// If nextItem is selectionsuppressed, we should undo the selection. We didn't undo it OnSelectionChange because we want change by API has the same undo logic.
-			void ChangeSelection(object prevItem, object nextItem)
+		// SelectedItem change can be invoked by API or user's action like clicking. if it's not from API, m_shouldRaiseInvokeItemInSelectionChange would be true
+		// If nextItem is selectionsuppressed, we should undo the selection. We didn't undo it OnSelectionChange because we want change by API has the same undo logic.
+		void ChangeSelection(object prevItem, object nextItem)
+		{
+			var nextActualItem = nextItem;
+			if (!m_shouldIgnoreNextSelectionChange)
 			{
-				var nextActualItem = nextItem;
-				if (!m_shouldIgnoreNextSelectionChange)
-				{
-					try { 
+				try
+				{ 
 					m_shouldIgnoreNextSelectionChange = true;
 
 					bool isSettingsItem = IsSettingsItem(nextActualItem);
@@ -1301,7 +1278,7 @@ namespace Windows.UI.Xaml.Controls
 							{
 								recommendedDirection = NavigationRecommendedTransitionDirection.FromOverflow;
 							}
-							else if (!isSettingsItem && prevItem != null && nextActualItem)
+							else if (!isSettingsItem && prevItem != null && nextActualItem != null)
 							{
 								recommendedDirection = GetRecommendedTransitionDirection(NavigationViewItemBaseOrSettingsContentFromData(prevItem),
 									NavigationViewItemBaseOrSettingsContentFromData(nextActualItem));
@@ -1329,7 +1306,7 @@ namespace Windows.UI.Xaml.Controls
 									recommendedDirection = NavigationRecommendedTransitionDirection.Default;
 
 									// Customer set SelectedItem to null in ItemInvoked event, so we unselect the old selectedItem.
-									if (invokedItem && nextActualItem == null)
+									if (invokedItem != null && nextActualItem == null)
 									{
 										UnselectPrevItem(invokedItem, nextActualItem);
 									}
@@ -1377,8 +1354,8 @@ namespace Windows.UI.Xaml.Controls
 
 		void RaiseItemInvoked(object item,
 			bool isSettings,
-			NavigationViewItemBase container,
-			NavigationRecommendedTransitionDirection recommendedDirection)
+			NavigationViewItemBase container = null,
+			NavigationRecommendedTransitionDirection recommendedDirection = NavigationRecommendedTransitionDirection.Default)
 		{
 			var invokedItem = item;
 			var invokedContainer = container;
@@ -1411,7 +1388,7 @@ namespace Windows.UI.Xaml.Controls
 			eventArgs.InvokedItem = invokedItem;
 			eventArgs.InvokedItemContainer = invokedContainer;
 			eventArgs.IsSettingsInvoked = isSettings;
-			eventArgs.RecommendedNavigationTransitionInfo(CreateNavigationTransitionInfo(recommendedDirection));
+			eventArgs.RecommendedNavigationTransitionInfo = CreateNavigationTransitionInfo(recommendedDirection);
 			OnItemInvokedEventSource(this, eventArgs);
 		}
 
@@ -1571,7 +1548,7 @@ namespace Windows.UI.Xaml.Controls
 			// work on left navigation, only dealing with the top primary list here and only with items that don't have
 			// !SelectsOnInvoked set to true. If !SelectsOnInvoked is true, we'll skip the item and try focusing on the next one
 			// that meets the conditions, in the same direction.
-			var shoulderNavigationEnabledParamValue = ShoulderNavigationEnabled();
+			var shoulderNavigationEnabledParamValue = ShoulderNavigationEnabled;
 			var shoulderNavigationForcedDisabled = (shoulderNavigationEnabledParamValue == NavigationViewShoulderNavigationEnabled.Never);
 
 			if (!IsTopNavigationView() 
@@ -1614,7 +1591,7 @@ namespace Windows.UI.Xaml.Controls
 							if (newItem is NavigationViewItem newNavViewItem)
 							{
 								// This is done to skip Separators or other items that are not NavigationViewItems
-								if (newNavViewItem.SelectsOnInvoked())
+								if (newNavViewItem.SelectsOnInvoked)
 								{
 									topNavListView.SelectedItem = newItem;
 									return true;
@@ -1783,7 +1760,7 @@ namespace Windows.UI.Xaml.Controls
 				// We want to use Effect, but it's not in all os of rs5. as a workaround, we only apply effect to the os which is already remove velocity key.
 				//if (var sliderNav2 = sliderNav.try_as<ISlideNavigationTransitionInfo2>())
 				//{
-					sliderNav.Effect(effect);
+					sliderNav.Effect = effect;
 				//}
 				return sliderNav;
 			} 
@@ -1827,7 +1804,7 @@ namespace Windows.UI.Xaml.Controls
 			// Here we assume the LastItemCalledInIsItemItsOwnContainerOverride is the container.
 			NavigationViewItemBase container = null;
 			var listView = IsTopNavigationView() ? m_topNavListView : m_leftNavListView;
-			global::System.Diagnostics.Debug.Assert(listView);
+			global::System.Diagnostics.Debug.Assert(listView != null);
 
 			if (listView is NavigationViewList navListView)
 			{
@@ -1856,7 +1833,7 @@ namespace Windows.UI.Xaml.Controls
 
 		void UpdateSingleSelectionFollowsFocusTemplateSetting()
 		{
-			GetTemplateSettings().SingleSelectionFollowsFocus(IsNavigationViewListSingleSelectionFollowsFocus());
+			GetTemplateSettings().SingleSelectionFollowsFocus = IsNavigationViewListSingleSelectionFollowsFocus();
 		}
 
 		void OnSelectedItemPropertyChanged(DependencyPropertyChangedEventArgs args)
@@ -1962,7 +1939,7 @@ namespace Windows.UI.Xaml.Controls
 				// If we unselect an item, ListView doesn't tolerate setting the SelectedItem to null. 
 				// Instead we remove IsSelected from the item itself, and it make ListView to unselect it.
 				// If we select an item, we follow the unselect to simplify the code.
-				container.IsSelected(selected);
+				container.IsSelected = selected;
 			}
 		 }
 
@@ -1987,7 +1964,7 @@ namespace Windows.UI.Xaml.Controls
 			// 1, select from setting to listviewitem or null
 			// 2, select from listviewitem to setting
 			// 3, select from listviewitem to null from API.
-			if (prevIte != null && prevItem != nextItem)
+			if (prevItem != null && prevItem != nextItem)
 			{
 				if (IsSettingsItem(prevItem) || (nextItem != null && IsSettingsItem(nextItem)) || nextItem == null)
 				{
@@ -2026,7 +2003,7 @@ namespace Windows.UI.Xaml.Controls
 			var button = m_topNavOverflowButton;
 			if (button != null)
 			{
-				var flyout = button.Flyout();
+				var flyout = button.Flyout;
 				if (flyout != null)
 				{ 
 					flyout.Hide();
@@ -2034,12 +2011,12 @@ namespace Windows.UI.Xaml.Controls
 			}
 		}
 
-		void UpdateVisualState(bool useTransitions)
+		void UpdateVisualState(bool useTransitions = false)
 		{
 			if (m_appliedTemplate)
 			{
 				var box = AutoSuggestBox;
-				VisualStateManager.GoToState(this, box ? "AutoSuggestBoxVisible" : "AutoSuggestBoxCollapsed", false /*useTransitions*/);
+				VisualStateManager.GoToState(this, box != null ? "AutoSuggestBoxVisible" : "AutoSuggestBoxCollapsed", false /*useTransitions*/);
 
 				bool isVisible = IsSettingsVisible;
 				VisualStateManager.GoToState(this, isVisible ? "SettingsVisible" : "SettingsCollapsed", false /*useTransitions*/);
@@ -2077,17 +2054,17 @@ namespace Windows.UI.Xaml.Controls
 
 				PropagateChangeToNavigationViewLists(NavigationViewPropagateTarget.LeftListView,
 					(NavigationViewList list) =>
-				{
-					list.SetShowFocusVisual(showFocusVisual);
-				}
-				);
+					{
+						list.SetShowFocusVisual(showFocusVisual);
+					}
+					);
 
 				PropagateChangeToNavigationViewLists(NavigationViewPropagateTarget.TopListView,
 					(NavigationViewList list) =>
-				{
-					list.SetShowFocusVisual(showFocusVisual);
-				}
-				);
+					{
+						list.SetShowFocusVisual(showFocusVisual);
+					}
+					);
 			}
 		}
 
@@ -2152,7 +2129,7 @@ namespace Windows.UI.Xaml.Controls
 			}
 		}
 
-		float MeasureTopNavigationViewDesiredWidth(Size availableSize)
+		double MeasureTopNavigationViewDesiredWidth(Size availableSize)
 		{
 			double width = 0.0;
 			width += LayoutUtils.MeasureAndGetDesiredWidthFor(m_buttonHolderGrid, availableSize);
@@ -2186,7 +2163,7 @@ namespace Windows.UI.Xaml.Controls
 				if (size > 1)
 				{
 					var container = listView.ContainerFromIndex(1);
-					firstMeasure = !container;
+					firstMeasure = container == null;
 				}
 			}
 			return firstMeasure;
@@ -2283,7 +2260,7 @@ namespace Windows.UI.Xaml.Controls
 				{
 					m_topDataProvider.InvalidWidthCacheIfOverflowItemContentChanged();
 
-					var movableItems = FindMovableItemsRecoverToPrimaryList(availableSize.Width- desiredWidth, {}/*includeItems*/);
+					var movableItems = FindMovableItemsRecoverToPrimaryList(availableSize.Width- desiredWidth, new List<int>()/*includeItems*/);
 					m_topDataProvider.MoveItemsToPrimaryList(movableItems);
 					if (m_topDataProvider.HasInvalidWidth(movableItems))
 					{
@@ -2323,9 +2300,9 @@ namespace Windows.UI.Xaml.Controls
 
 		void SetOverflowButtonVisibility(Visibility visibility)
 		{ 
-			if (visibility != TemplateSettings.OverflowButtonVisibility())
+			if (visibility != TemplateSettings.OverflowButtonVisibility)
 			{
-			   GetTemplateSettings().OverflowButtonVisibility(visibility);
+			   GetTemplateSettings().OverflowButtonVisibility = visibility;
 			}
 		}
 
@@ -2415,7 +2392,7 @@ namespace Windows.UI.Xaml.Controls
 			}
 		}
 
-		void ShrinkTopNavigationSize(float desiredWidth, Size availableSize)
+		void ShrinkTopNavigationSize(double desiredWidth, Size availableSize)
 		{   
 			UpdateTopNavigationWidthCache();
 			SetTopNavigationViewNextMode(TopNavigationViewLayoutState.Overflow);
@@ -2438,7 +2415,7 @@ namespace Windows.UI.Xaml.Controls
 			var widthAtLeastToBeRemoved = desiredWidth - availableSize.Width;
 			if (widthAtLeastToBeRemoved > 0)
 			{
-				var itemToBeRemoved = FindMovableItemsToBeRemovedFromPrimaryList(widthAtLeastToBeRemoved, { selectedItemIndex });
+				var itemToBeRemoved = FindMovableItemsToBeRemovedFromPrimaryList(widthAtLeastToBeRemoved, new List<int>{ selectedItemIndex });
 
 				// At least one item is kept on primary list
 				KeepAtLeastOneItemInPrimaryList(itemToBeRemoved, false/*shouldKeepFirst*/);
@@ -2486,7 +2463,7 @@ namespace Windows.UI.Xaml.Controls
 			//  2, virtualization and it doesn't have cached width
 			if (i == size && !toBeMoved.Empty())
 			{
-				toBeMoved.RemoveAll(toBeMoved.Count - 1);
+				toBeMoved.RemoveAt(toBeMoved.Count - 1);
 			}
 			return toBeMoved;
 		}
@@ -2500,10 +2477,10 @@ namespace Windows.UI.Xaml.Controls
 			{
 				if (m_topDataProvider.IsItemInPrimaryList(i))
 				{
-					if (!excludeItems.Contains())
+					if (!excludeItems.Contains(i))
 					{
 						var width = m_topDataProvider.GetWidthForItem(i);
-						toBeMoved.push_back(i);
+						toBeMoved.Add(i);
 						widthAtLeastToBeRemoved -= width;
 					}
 				}
@@ -2513,7 +2490,7 @@ namespace Windows.UI.Xaml.Controls
 			return toBeMoved;
 		}
 
-		List<int> FindMovableItemsBeyondAvailableWidth(float availableWidth)
+		List<int> FindMovableItemsBeyondAvailableWidth(double availableWidth)
 		{
 			List<int> toBeMoved = new List<int>();
 			var listView = m_topNavListView;
@@ -2610,7 +2587,7 @@ namespace Windows.UI.Xaml.Controls
 
 		bool IsTopPrimaryListVisible()
 		{
-			return m_topNavListView && (TemplateSettings.TopPaneVisibility == Visibility.Visible);
+			return m_topNavListView != null && (TemplateSettings.TopPaneVisibility == Visibility.Visible);
 		}
 
 		void CoerceToGreaterThanZero(ref double value)
@@ -2677,7 +2654,7 @@ namespace Windows.UI.Xaml.Controls
 				// When PaneDisplayMode is changed, reset the force flag to make the Pane can be opened automatically again.
 				m_wasForceClosed = false;
 
-				UpdatePaneDisplayMode(args.OldValue, auto_unbox(args.NewValue));
+				UpdatePaneDisplayMode((NavigationViewPaneDisplayMode)args.OldValue, (NavigationViewPaneDisplayMode)args.NewValue);
 				UpdatePaneToggleButtonVisibility();
 				UpdatePaneVisibility();
 				UpdateVisualState();
@@ -2718,7 +2695,7 @@ namespace Windows.UI.Xaml.Controls
 
 		void OnLoaded(object sender, RoutedEventArgs args)
 		{
-			var item = SelectedItem();
+			var item = SelectedItem;
 			if (item != null)
 			{
 				if (!IsSelectionSuppressed(item))
@@ -2732,7 +2709,7 @@ namespace Windows.UI.Xaml.Controls
 					{
 						if (item is NavigationViewItem navViewItem)
 						{
-							navViewItem.IsSelected(true);
+							navViewItem.IsSelected = true;
 						}
 					}
 				}
@@ -2759,7 +2736,7 @@ namespace Windows.UI.Xaml.Controls
 				{
 					// splitview.IsPaneOpen and nav.IsPaneOpen is two way binding. There is possible change that SplitView.IsPaneOpen=false, then
 					// nav.IsPaneOpen=false. We don't need to set force flag in this situation
-					if (splitView.IsPaneOpen())
+					if (splitView.IsPaneOpen)
 					{
 						m_wasForceClosed = true;
 					}
@@ -2773,7 +2750,7 @@ namespace Windows.UI.Xaml.Controls
 		void UpdatePaneToggleButtonVisibility()
 		{
 			var visible = IsPaneToggleButtonVisible && !IsTopNavigationView();
-			GetTemplateSettings().PaneToggleButtonVisibility(Util.VisibilityFromBool(visible));
+			GetTemplateSettings().PaneToggleButtonVisibility = Util.VisibilityFromBool(visible);
 		}
 
 		void UpdatePaneDisplayMode()
@@ -2792,12 +2769,12 @@ namespace Windows.UI.Xaml.Controls
 
 				CreateAndHookEventsToSettings(c_settingsName);
 
-				if (IUIElement8 thisAsUIElement8 = this)
+				//if (IUIElement8 thisAsUIElement8 = this)
 				{
 					var paneToggleButton = m_paneToggleButton;
 					if (paneToggleButton != null)
 					{
-						thisAsUIElement8.KeyTipTarget(paneToggleButton);
+						/*thisAsUIElement8.*/KeyTipTarget = paneToggleButton;
 					}
 				}
 			}
@@ -2814,9 +2791,10 @@ namespace Windows.UI.Xaml.Controls
 
 				// if (IUIElement8 thisAsUIElement8 = this)
 				{
-					if (var topNavOverflowButton = m_topNavOverflowButton)
+					var topNavOverflowButton = m_topNavOverflowButton;
+					if (topNavOverflowButton != null)
 					{
-						thisAsUIElement8.KeyTipTarget(topNavOverflowButton);
+						/*thisAsUIElement8.*/KeyTipTarget = topNavOverflowButton;
 					}
 				}
 			}
@@ -2884,14 +2862,14 @@ namespace Windows.UI.Xaml.Controls
 				var oldParent = oldParentTrackRef;
 				if (oldParent != null)
 				{
-					oldParent.ClearValue(ContentControl.ContentProperty());
+					oldParent.ClearValue(ContentControl.ContentProperty);
 				}
 
-				var binding = Binding();
-				var propertyPath = PropertyPath(propertyPathName);
-				binding.Path(propertyPath);
-				binding.Source(this);
-				BindingOperations.SetBinding(newParent, ContentControl.ContentProperty(), binding);
+				var binding = new Binding();
+				var propertyPath = new PropertyPath(propertyPathName);
+				binding.Path = propertyPath;
+				binding.Source = this;
+				BindingOperations.SetBinding(newParent, ContentControl.ContentProperty, binding);
 			}
 		}
 
@@ -2910,448 +2888,498 @@ namespace Windows.UI.Xaml.Controls
 				notControl = m_leftNavPaneAutoSuggestBoxPresenter;
 			}
 
-			if (autoSuggestBoxContentControl)
+			if (autoSuggestBoxContentControl != null)
 			{
-				if (notControl)
+				if (notControl != null)
 				{
-					notControl.ClearValue(ContentControl.ContentProperty());
+					notControl.ClearValue(ContentControl.ContentProperty);
 				}
 
-				var binding = Binding();
-				var propertyPath = PropertyPath("AutoSuggestBox");
-				binding.Path(propertyPath);
-				binding.Source(this);
-				BindingOperations.SetBinding(autoSuggestBoxContentControl, ContentControl.ContentProperty(), binding);
+				var binding = new Binding();
+				var propertyPath = new PropertyPath("AutoSuggestBox");
+				binding.Path = propertyPath;
+				binding.Source = this;
+				BindingOperations.SetBinding(autoSuggestBoxContentControl, ContentControl.ContentProperty, binding);
 			}
 		}
 
-		//void UpdateHeaderVisibility()
-		//{
-		//	if (!m_appliedTemplate)
-		//	{
-		//		return;
-		//	}
+		void UpdateHeaderVisibility()
+		{
+			if (!m_appliedTemplate)
+			{
+				return;
+			}
 
-		//	UpdateHeaderVisibility(DisplayMode());
-		//}
+			UpdateHeaderVisibility(DisplayMode);
+		}
 
-		//void UpdateHeaderVisibility(NavigationViewDisplayMode displayMode)
-		//{
-		//	bool showHeader = AlwaysShowHeader() || displayMode == NavigationViewDisplayMode.Minimal;
-		//	// Like bug 17517627, Customer like WallPaper Studio 10 expects a HeaderContent visual even if Header() is null. 
-		//	// App crashes when they have dependency on that visual, but the crash is not directly state that it's a header problem.   
-		//	// NavigationView doesn't use quirk, but we determine the version by themeresource.
-		//	// As a workaround, we 'quirk' it for RS4 or before release. if it's RS4 or before, HeaderVisible is not related to Header().
-		//	// If theme resource is RS5 or later, we will not show header if header is null.
-		//	if (!ShouldPreserveNavigationViewRS4Behavior())
-		//	{
-		//		showHeader = Header() && showHeader;
-		//	}
-		//	VisualStateManager.GoToState(this, showHeader ? "HeaderVisible" : "HeaderCollapsed", false /*useTransitions*/);
-		//}
+		void UpdateHeaderVisibility(NavigationViewDisplayMode displayMode)
+		{
+			bool showHeader = AlwaysShowHeader || displayMode == NavigationViewDisplayMode.Minimal;
+			// Like bug 17517627, Customer like WallPaper Studio 10 expects a HeaderContent visual even if Header() is null. 
+			// App crashes when they have dependency on that visual, but the crash is not directly state that it's a header problem.   
+			// NavigationView doesn't use quirk, but we determine the version by themeresource.
+			// As a workaround, we 'quirk' it for RS4 or before release. if it's RS4 or before, HeaderVisible is not related to Header().
+			// If theme resource is RS5 or later, we will not show header if header is null.
+			if (!ShouldPreserveNavigationViewRS4Behavior())
+			{
+				showHeader = Header != null && showHeader;
+			}
+			VisualStateManager.GoToState(this, showHeader ? "HeaderVisible" : "HeaderCollapsed", false /*useTransitions*/);
+		}
 
-		//void UpdatePaneTabFocusNavigation()
-		//{
-		//	if (!m_appliedTemplate)
-		//	{
-		//		return;
-		//	}
+		void UpdatePaneTabFocusNavigation()
+		{
+			if (!m_appliedTemplate)
+			{
+				return;
+			}
 
-		//	if (SharedHelpers.IsRS2OrHigher())
-		//	{
-		//		KeyboardNavigationMode mode = KeyboardNavigationMode.Local;
+			if (SharedHelpers.IsRS2OrHigher())
+			{
+				KeyboardNavigationMode mode = KeyboardNavigationMode.Local;
 
-		//		if (var splitView = m_rootSplitView)
-		//		{
-		//			// If the pane is open in an overlay (light-dismiss) mode, trap keyboard focus inside the pane
-		//			if (IsPaneOpen() && (splitView.DisplayMode() == SplitViewDisplayMode.Overlay || splitView.DisplayMode() == SplitViewDisplayMode.CompactOverlay))
-		//			{
-		//				mode = KeyboardNavigationMode.Cycle;
-		//			}
-		//		}
+				var splitView = m_rootSplitView;
+				if (splitView != null)
+				{
+					// If the pane is open in an overlay (light-dismiss) mode, trap keyboard focus inside the pane
+					if (IsPaneOpen && (splitView.DisplayMode == SplitViewDisplayMode.Overlay || splitView.DisplayMode == SplitViewDisplayMode.CompactOverlay))
+					{
+						mode = KeyboardNavigationMode.Cycle;
+					}
+				}
 
-		//		if (var paneContentGrid = m_paneContentGrid)
-		//		{
-		//			paneContentGrid.TabFocusNavigation(mode);
-		//		}
-		//	}
-		//}
+				var paneContentGrid = m_paneContentGrid;
+				if (paneContentGrid != null)
+				{
+					paneContentGrid.TabFocusNavigation = mode;
+				}
+			}
+		}
 
-		//void UpdatePaneToggleSize()
-		//{
-		//	if (!ShouldPreserveNavigationViewRS3Behavior())
-		//	{
-		//		if (var splitView = m_rootSplitView)
-		//		{
-		//			double width = c_paneToggleButtonWidth;
+		void UpdatePaneToggleSize()
+		{
+			if (!ShouldPreserveNavigationViewRS3Behavior())
+			{
+				var splitView = m_rootSplitView;
+				if (splitView != null)
+				{
+					double width = c_paneToggleButtonWidth;
 
-		//			var resourceName = box_value("PaneToggleButtonWidth");
-		//			if (Application.Current().Resources().HasKey(resourceName))
-		//			{
-		//				if (var lookup = Application.Current().Resources().Lookup(resourceName))
-		//				{
-		//					width = unbox_value<double>(lookup);
-		//				}
-		//			}
+					var resourceName = "PaneToggleButtonWidth";
+					if (Application.Current.Resources.HasKey(resourceName))
+					{
+						var lookup = Application.Current.Resources.Lookup(resourceName);
+						if (lookup is double value)
+						{
+							width = value;
+						}
+					}
 
-		//			double togglePaneButtonWidth = width;
+					double togglePaneButtonWidth = width;
 
-		//			if (ShouldShowBackButton() && splitView.DisplayMode() == SplitViewDisplayMode.Overlay)
-		//			{
-		//				double backButtonWidth = c_backButtonWidth;
-		//				if (var backButton = m_backButton)
-		//				{
-		//					backButtonWidth = backButton.Width();
-		//				}
+					if (ShouldShowBackButton() && splitView.DisplayMode == SplitViewDisplayMode.Overlay)
+					{
+						double backButtonWidth = c_backButtonWidth;
+						var backButton = m_backButton;
+						if (backButton != null)
+						{
+							backButtonWidth = backButton.Width;
+						}
 
-		//				width += backButtonWidth;
-		//			}
+						width += backButtonWidth;
+					}
 
-		//			if (!m_isClosedCompact && PaneTitle().size() > 0)
-		//			{
-		//				if (splitView.DisplayMode() == SplitViewDisplayMode.Overlay && IsPaneOpen())
-		//				{
-		//					width = OpenPaneLength();
-		//					togglePaneButtonWidth = OpenPaneLength() - (ShouldShowBackButton() ? c_backButtonWidth : 0);
-		//				}
-		//				else if (!(splitView.DisplayMode() == SplitViewDisplayMode.Overlay && !IsPaneOpen()))
-		//				{
-		//					width = OpenPaneLength();
-		//					togglePaneButtonWidth = OpenPaneLength();
-		//				}
-		//			}
+					if (!m_isClosedCompact && PaneTitle.Length > 0)
+					{
+						if (splitView.DisplayMode == SplitViewDisplayMode.Overlay && IsPaneOpen)
+						{
+							width = OpenPaneLength;
+							togglePaneButtonWidth = OpenPaneLength - (ShouldShowBackButton() ? c_backButtonWidth : 0);
+						}
+						else if (!(splitView.DisplayMode == SplitViewDisplayMode.Overlay && !IsPaneOpen))
+						{
+							width = OpenPaneLength;
+							togglePaneButtonWidth = OpenPaneLength;
+						}
+					}
 
-		//			if (var buttonHolderGrid = m_buttonHolderGrid)
-		//			{
-		//				buttonHolderGrid.Width(width);
-		//			}
+					var buttonHolderGrid = m_buttonHolderGrid;
+					if (buttonHolderGrid != null)
+					{
+						buttonHolderGrid.Width = width;
+					}
 
-		//			if (var toggleButton = m_paneToggleButton)
-		//			{
-		//				toggleButton.Width(togglePaneButtonWidth);
-		//			}
-		//		}
-		//	}
-		//}
+					var toggleButton = m_paneToggleButton;
+					if (toggleButton != null)
+					{
+						toggleButton.Width = togglePaneButtonWidth;
+					}
+				}
+			}
+		}
 
-		//void UpdateBackButtonVisibility()
-		//{
-		//	if (!m_appliedTemplate)
-		//	{
-		//		return;
-		//	}
+		void UpdateBackButtonVisibility()
+		{
+			if (!m_appliedTemplate)
+			{
+				return;
+			}
 
-		//	var shouldShowBackButton = ShouldShowBackButton();
-		//	var visibility = Util.VisibilityFromBool(shouldShowBackButton);
-		//	GetTemplateSettings().BackButtonVisibility(visibility);
+			var shouldShowBackButton = ShouldShowBackButton();
+			var visibility = Util.VisibilityFromBool(shouldShowBackButton);
+			GetTemplateSettings().BackButtonVisibility = visibility;
 
-		//	if (var backButton = m_backButton; backButton && ShouldPreserveNavigationViewRS4Behavior())
-		//	{
-		//		backButton.Visibility(visibility);
-		//	}
+			var backButton = m_backButton;
+			if (backButton != null && ShouldPreserveNavigationViewRS4Behavior())
+			{
+				backButton.Visibility = visibility;
+			}
 
-		//	if (var paneContentGridAsUIE = m_paneContentGrid)
-		//	{
-		//		if (var paneContentGrid = paneContentGridAsUIE.try_as<Grid>())
-		//		{
-		//			var rowDefs = paneContentGrid.RowDefinitions();
-		//			var rowDef = rowDefs.GetAt(c_backButtonRowDefinition);
+			var paneContentGridAsUIE = m_paneContentGrid;
+			if (paneContentGridAsUIE != null)
+			{
+				if (paneContentGridAsUIE is Grid paneContentGrid)
+				{
+					var rowDefs = paneContentGrid.RowDefinitions;
+					var rowDef = rowDefs[c_backButtonRowDefinition];
 
-		//			int backButtonRowHeight = 0;
-		//			if (!IsOverlay() && ShouldShowBackButton())
-		//			{
-		//				backButtonRowHeight = c_backButtonHeight;
-		//			}
-		//			else if (ShouldPreserveNavigationViewRS3Behavior())
-		//			{
-		//				// This row represented the height of the hamburger+margin in RS3 and prior
-		//				backButtonRowHeight = c_toggleButtonHeightWhenShouldPreserveNavigationViewRS3Behavior;
-		//			}
+					int backButtonRowHeight = 0;
+					if (!IsOverlay() && ShouldShowBackButton())
+					{
+						backButtonRowHeight = c_backButtonHeight;
+					}
+					else if (ShouldPreserveNavigationViewRS3Behavior())
+					{
+						// This row represented the height of the hamburger+margin in RS3 and prior
+						backButtonRowHeight = c_toggleButtonHeightWhenShouldPreserveNavigationViewRS3Behavior;
+					}
 
-		//			var length = GridLengthHelper.FromPixels(backButtonRowHeight);
-		//			rowDef.Height(length);
-		//		}
-		//	}
+					var length = GridLengthHelper.FromPixels(backButtonRowHeight);
+					rowDef.Height(length);
+				}
+			}
 
-		//	if (!ShouldPreserveNavigationViewRS4Behavior())
-		//	{
-		//		VisualStateManager.GoToState(this, shouldShowBackButton ? "BackButtonVisible" : "BackButtonCollapsed", false /*useTransitions*/);
-		//	}
-		//	UpdateTitleBarPadding();
-		//}
+			if (!ShouldPreserveNavigationViewRS4Behavior())
+			{
+				VisualStateManager.GoToState(this, shouldShowBackButton ? "BackButtonVisible" : "BackButtonCollapsed", false /*useTransitions*/);
+			}
+			UpdateTitleBarPadding();
+		}
 
-		//void UpdatePaneTitleMargins()
-		//{
-		//	if (var textBlock = m_paneTitleTextBlock)
-		//	{
-		//		double width = 0;
+		void UpdatePaneTitleMargins()
+		{
+			var textBlock = m_paneTitleTextBlock;
+			if (textBlock != null)
+			{
+				double width = 0;
 
-		//		double buttonSize = c_paneToggleButtonWidth; // in case the resource lookup fails
-		//		if (var lookup = Application.Current().Resources().Lookup(box_value("PaneToggleButtonWidth")))
-		//		{
-		//			buttonSize = unbox_value<double>(lookup);
-		//		}
+				double buttonSize = c_paneToggleButtonWidth; // in case the resource lookup fails
+				var lookup = Application.Current.Resources.Lookup("PaneToggleButtonWidth");
+				if (lookup is double value)
+				{
+					buttonSize = value;
+				}
 
-		//		width += buttonSize;
+				width += buttonSize;
 
-		//		if (ShouldShowBackButton() && IsOverlay())
-		//		{
-		//			width += c_backButtonWidth;
-		//		}
+				if (ShouldShowBackButton() && IsOverlay())
+				{
+					width += c_backButtonWidth;
+				}
 
-		//		textBlock.Margin({ width, 0, 0, 0 }); // see "Hamburger title" on uni
-		//	}
-		//}
+				textBlock.Margin = new Thickness(width, 0, 0, 0); // see "Hamburger title" on uni
+			}
+		}
 
-		//void UpdateLeftNavListViewItemSource(object items)
-		//{
-		//	UpdateListViewItemsSource(m_leftNavListView, items);
-		//}
+		void UpdateLeftNavListViewItemSource(object items)
+		{
+			UpdateListViewItemsSource(m_leftNavListView, items);
+		}
 
-		//void UpdateTopNavListViewItemSource(object items)
-		//{
-		//	if (m_topDataProvider.ShouldChangeDataSource(items))
-		//	{
-		//		// unbinding Data from ListView
-		//		UpdateListViewItemsSource(m_topNavListView, null);
-		//		UpdateListViewItemsSource(m_topNavListOverflowView, null);
+		void UpdateTopNavListViewItemSource(object items)
+		{
+			if (m_topDataProvider.ShouldChangeDataSource(items))
+			{
+				// unbinding Data from ListView
+				UpdateListViewItemsSource(m_topNavListView, null);
+				UpdateListViewItemsSource(m_topNavListOverflowView, null);
 
-		//		// Change data source and setup vectors
-		//		m_topDataProvider.SetDataSource(items);
+				// Change data source and setup vectors
+				m_topDataProvider.SetDataSource(items);
 
-		//		// rebinding
-		//		if (items)
-		//		{
-		//			UpdateListViewItemsSource(m_topNavListView, m_topDataProvider.GetPrimaryItems());
-		//			UpdateListViewItemsSource(m_topNavListOverflowView, m_topDataProvider.GetOverflowItems());
-		//		}
-		//		else
-		//		{
-		//			UpdateListViewItemsSource(m_topNavListView, null);
-		//			UpdateListViewItemsSource(m_topNavListOverflowView, null);
-		//		}
-		//	}
-		//}
+				// rebinding
+				if (items != null)
+				{
+					UpdateListViewItemsSource(m_topNavListView, m_topDataProvider.GetPrimaryItems());
+					UpdateListViewItemsSource(m_topNavListOverflowView, m_topDataProvider.GetOverflowItems());
+				}
+				else
+				{
+					UpdateListViewItemsSource(m_topNavListView, null);
+					UpdateListViewItemsSource(m_topNavListOverflowView, null);
+				}
+			}
+		}
 
-		//void UpdateListViewItemSource()
-		//{
-		//	if (!m_appliedTemplate)
-		//	{
-		//		return;
-		//	}
+		void UpdateListViewItemSource()
+		{
+			if (!m_appliedTemplate)
+			{
+				return;
+			}
 
-		//	var dataSource = MenuItemsSource();
-		//	if (!dataSource)
-		//	{
-		//		dataSource = MenuItems();
-		//	}
+			var dataSource = MenuItemsSource;
+			if (dataSource == null)
+			{
+				dataSource = MenuItems;
+			}
 
-		//	// Always unset the data source first from old ListView, then set data source for new ListView.
-		//	if (IsTopNavigationView())
-		//	{
-		//		UpdateLeftNavListViewItemSource(null);
-		//		UpdateTopNavListViewItemSource(dataSource);
-		//	}
-		//	else
-		//	{
-		//		UpdateTopNavListViewItemSource(null);
-		//		UpdateLeftNavListViewItemSource(dataSource);
-		//	}
+			// Always unset the data source first from old ListView, then set data source for new ListView.
+			if (IsTopNavigationView())
+			{
+				UpdateLeftNavListViewItemSource(null);
+				UpdateTopNavListViewItemSource(dataSource);
+			}
+			else
+			{
+				UpdateTopNavListViewItemSource(null);
+				UpdateLeftNavListViewItemSource(dataSource);
+			}
 
-		//	if (IsTopNavigationView())
-		//	{
-		//		InvalidateTopNavPrimaryLayout();
-		//		UpdateSelectedItem();
-		//	}
-		//}
+			if (IsTopNavigationView())
+			{
+				InvalidateTopNavPrimaryLayout();
+				UpdateSelectedItem();
+			}
+		}
 
-		//void UpdateListViewItemsSource(const ListView& listView, 
-		//	object itemsSource)
-		//{
-		//	if (listView)
-		//	{
-		//		var oldItemsSource = listView.ItemsSource();
-		//		if (oldItemsSource != itemsSource)
-		//		{
-		//			listView.ItemsSource(itemsSource);
-		//		}
-		//	}
-		//}
+		void UpdateListViewItemsSource(ListView listView, 
+			object itemsSource)
+		{
+			if (listView != null)
+			{
+				var oldItemsSource = listView.ItemsSource;
+				if (oldItemsSource != itemsSource)
+				{
+					listView.ItemsSource = itemsSource;
+				}
+			}
+		}
 
-		//void OnTitleBarMetricsChanged(object sender, object /*args*/)
-		//{
-		//	UpdateTitleBarPadding();
-		//}
+		void OnTitleBarMetricsChanged(object sender, object args)
+		{
+			UpdateTitleBarPadding();
+		}
 
-		//void OnTitleBarIsVisibleChanged(const CoreApplicationViewTitleBar& sender, object /*args*/)
-		//{
-		//	UpdateTitleBarPadding();
-		//}
+		void OnTitleBarIsVisibleChanged(CoreApplicationViewTitleBar sender, object args)
+		{
+			UpdateTitleBarPadding();
+		}
 
-		//bool ShouldIgnoreMeasureOverride()
-		//{
-		//	return m_shouldIgnoreNextMeasureOverride || m_shouldIgnoreOverflowItemSelectionChange || m_shouldIgnoreNextSelectionChange;
-		//}
+		bool ShouldIgnoreMeasureOverride()
+		{
+			return m_shouldIgnoreNextMeasureOverride || m_shouldIgnoreOverflowItemSelectionChange || m_shouldIgnoreNextSelectionChange;
+		}
 
-		//bool NeedTopPaddingForRS5OrHigher(CoreApplicationViewTitleBar coreTitleBar)
-		//{
-		//	// Starting on RS5, we will be using the following IsVisible API together with ExtendViewIntoTitleBar
-		//	// to decide whether to try to add top padding or not.
-		//	// We don't add padding when in fullscreen or tablet mode.
-		//	return coreTitleBar.IsVisible() && coreTitleBar.ExtendViewIntoTitleBar()
-		//		&& !IsFullScreenOrTabletMode();
-		//}
+		bool NeedTopPaddingForRS5OrHigher(CoreApplicationViewTitleBar coreTitleBar)
+		{
+			// Starting on RS5, we will be using the following IsVisible API together with ExtendViewIntoTitleBar
+			// to decide whether to try to add top padding or not.
+			// We don't add padding when in fullscreen or tablet mode.
+			return coreTitleBar.IsVisible && coreTitleBar.ExtendViewIntoTitleBar
+				&& !IsFullScreenOrTabletMode();
+		}
 
-		//void UpdateTitleBarPadding()
-		//{
-		//	if (!m_appliedTemplate)
-		//	{
-		//		return;
-		//	}
+		void UpdateTitleBarPadding()
+		{
+			if (!m_appliedTemplate)
+			{
+				return;
+			}
 
-		//	double topPadding = 0;
-		//	if (var coreTitleBar = m_coreTitleBar)
-		//	{
-		//		bool needsTopPadding = false;
-		//		if (ShouldPreserveNavigationViewRS3Behavior())
-		//		{
-		//			needsTopPadding = true;
-		//		}
-		//		else if (ShouldPreserveNavigationViewRS4Behavior())
-		//		{
-		//			// For RS4 apps maintain the behavior that we shipped for RS4.
-		//			// We keep this behavior for app compact purposes.
-		//			needsTopPadding = !coreTitleBar.ExtendViewIntoTitleBar();
-		//		}
-		//		else
-		//		{
-		//			needsTopPadding = NeedTopPaddingForRS5OrHigher(coreTitleBar);
-		//		}
+			double topPadding = 0;
+			var coreTitleBar = m_coreTitleBar;
+			if (coreTitleBar != null)
+			{
+				bool needsTopPadding = false;
+				if (ShouldPreserveNavigationViewRS3Behavior())
+				{
+					needsTopPadding = true;
+				}
+				else if (ShouldPreserveNavigationViewRS4Behavior())
+				{
+					// For RS4 apps maintain the behavior that we shipped for RS4.
+					// We keep this behavior for app compact purposes.
+					needsTopPadding = !coreTitleBar.ExtendViewIntoTitleBar();
+				}
+				else
+				{
+					needsTopPadding = NeedTopPaddingForRS5OrHigher(coreTitleBar);
+				}
 
-		//		if (needsTopPadding)
-		//		{
-		//			topPadding = coreTitleBar.Height();
+				if (needsTopPadding)
+				{
+					topPadding = coreTitleBar.Height();
 
-		//			// Only add extra padding if the NavView is the "root" of the app,
-		//			// but not if the app is expanding into the titlebar
-		//			UIElement root = Window.Current().Content();
-		//			GeneralTransform gt = TransformToVisual(root);
-		//			Point pos = gt.TransformPoint(Point(0.0f, 0.0f));
-		//			if (pos.Y != 0.0f)
-		//			{
-		//				topPadding = 0.0;
-		//			}
+					// Only add extra padding if the NavView is the "root" of the app,
+					// but not if the app is expanding into the titlebar
+					UIElement root = Window.Current.Content;
+					GeneralTransform gt = TransformToVisual(root);
+					Point pos = gt.TransformPoint(new Point(0.0f, 0.0f));
+					if (pos.Y != 0.0f)
+					{
+						topPadding = 0.0;
+					}
 
-		//			var backButtonVisibility = IsBackButtonVisible();
-		//			if (ShouldPreserveNavigationViewRS4Behavior())
-		//			{
-		//				if (var fe = m_togglePaneTopPadding)
-		//				{
-		//					fe.Height(topPadding);
-		//				}
+					var backButtonVisibility = IsBackButtonVisible;
+					if (ShouldPreserveNavigationViewRS4Behavior())
+					{
+						var fe = m_togglePaneTopPadding;
+						if (fe != null)
+						{
+							fe.Height = topPadding;
+						}
 
-		//				if (var fe = m_contentPaneTopPadding)
-		//				{
-		//					fe.Height(topPadding);
-		//				}
-		//			}
-		//		}
+						var feTop = m_contentPaneTopPadding;
+						if (feTop != null)
+						{
+							feTop.Height = topPadding;
+						}
+					}
+				}
 
-		//		if (var paneButton = m_paneToggleButton)
-		//		{
-		//			var thickness = ThicknessHelper.FromLengths(0, 0, 0, 0);
+				var paneButton = m_paneToggleButton;
+				if (paneButton != null)
+				{
+					var thickness = ThicknessHelper.FromLengths(0, 0, 0, 0);
 
-		//			if (ShouldShowBackButton())
-		//			{
-		//				if (IsOverlay())
-		//				{
-		//					thickness = ThicknessHelper.FromLengths(c_backButtonWidth, 0, 0, 0);
-		//				}
-		//				else
-		//				{
-		//					thickness = ThicknessHelper.FromLengths(0, c_backButtonHeight, 0, 0);
-		//				}
-		//			}
-		//			paneButton.Margin(thickness);
-		//		}
-		//	}
+					if (ShouldShowBackButton())
+					{
+						if (IsOverlay())
+						{
+							thickness = ThicknessHelper.FromLengths(c_backButtonWidth, 0, 0, 0);
+						}
+						else
+						{
+							thickness = ThicknessHelper.FromLengths(0, c_backButtonHeight, 0, 0);
+						}
+					}
+					paneButton.Margin = thickness;
+				}
+			}
 
-		//	if (var templateSettings = TemplateSettings())
-		//	{
-		//		// 0.0 and 0.00000000 is not the same in double world. try to reduce the number of TopPadding update event. epsilon is 0.1 here.
-		//		if (fabs(templateSettings.TopPadding() - topPadding) > 0.1)
-		//		{
-		//			GetTemplateSettings().TopPadding(topPadding);
-		//		}
-		//	}
-		//}
+			var templateSettings = TemplateSettings;
+			if (templateSettings != null)
+			{
+				// 0.0 and 0.00000000 is not the same in double world. try to reduce the number of TopPadding update event. epsilon is 0.1 here.
+				if (Math.Abs(templateSettings.TopPadding - topPadding) > 0.1)
+				{
+					GetTemplateSettings().TopPadding = topPadding;
+				}
+			}
+		}
 
-		//void UpdateSelectedItem()
-		//{
-		//	var item = SelectedItem();
-		//	var settingsItem = m_settingsItem;
-		//	if (settingsItem && item == settingsItem)
-		//	{
-		//		OnSettingsInvoked();
-		//	}
-		//	else
-		//	{
-		//		var lv = m_leftNavListView;
-		//		if (IsTopNavigationView())
-		//		{
-		//			lv = m_topNavListView;
-		//		}
+		void UpdateSelectedItem()
+		{
+			var item = SelectedItem;
+			var settingsItem = m_settingsItem;
+			if (settingsItem != null && item == settingsItem)
+			{
+				OnSettingsInvoked();
+			}
+			else
+			{
+				var lv = m_leftNavListView;
+				if (IsTopNavigationView())
+				{
+					lv = m_topNavListView;
+				}
 
-		//		if (lv)
-		//		{
-		//			lv.SelectedItem(item);
-		//		}
-		//	}
-		//}
+				if (lv != null)
+				{
+					lv.SelectedItem = item;
+				}
+			}
+		}
 
-		//void RaiseDisplayModeChanged(const NavigationViewDisplayMode& displayMode)
-		//{
-		//	SetValue(DisplayModeProperty, box_value(displayMode));
-		//	var eventArgs = make_self<NavigationViewDisplayModeChangedEventArgs>();
-		//	eventArgs.DisplayMode(displayMode);
-		//	m_displayModeChangedEventSource(this, *eventArgs);
-		//}
+		void RaiseDisplayModeChanged(NavigationViewDisplayMode displayMode)
+		{
+			SetValue(DisplayModeProperty, displayMode);
+			var eventArgs = new NavigationViewDisplayModeChangedEventArgs();
+			eventArgs.DisplayMode = displayMode;
+			OnDisplayModeChangedEventSource(this, eventArgs);
+		}
 
-		//// This method attaches the series of animations which are fired off dependent upon the amount 
-		//// of space give and the length of the strings involved. It occurs upon re-rendering.
-		//void CreateAndAttachHeaderAnimation(Visual visual) 
-		//{
-		//	var compositor = visual.Compositor();
-		//	var cubicFunction = compositor.CreateCubicBezierEasingFunction({ 0.0f, 0.35f }, { 0.15f, 1.0f });
-		//	var moveAnimation = compositor.CreateVector3KeyFrameAnimation();
-		//	moveAnimation.Target("Offset");
-		//	moveAnimation.InsertExpressionKeyFrame(1.0f, "this.FinalValue", cubicFunction);
-		//	moveAnimation.Duration(200ms);
+		// This method attaches the series of animations which are fired off dependent upon the amount 
+		// of space give and the length of the strings involved. It occurs upon re-rendering.
+		void CreateAndAttachHeaderAnimation(Visual visual) 
+		{
+			var compositor = visual.Compositor;
+			var cubicFunction = compositor.CreateCubicBezierEasingFunction(new Vector2(0.0f, 0.35f), new Vector2(0.15f, 1.0f));
+			var moveAnimation = compositor.CreateVector3KeyFrameAnimation();
+			moveAnimation.Target = "Offset";
+			moveAnimation.InsertExpressionKeyFrame(1.0f, "this.FinalValue", cubicFunction);
+			moveAnimation.Duration = TimeSpan.FromMilliseconds(200);
 
-		//	var collection = compositor.CreateImplicitAnimationCollection();
-		//	collection.Insert("Offset", moveAnimation);
-		//	visual.ImplicitAnimations(collection);
-		//}
+			var collection = compositor.CreateImplicitAnimationCollection();
+			collection.Add("Offset", moveAnimation);
+			visual.ImplicitAnimations = collection;
+		}
 
-		//bool IsFullScreenOrTabletMode()
-		//{
-		//	// ApplicationView.GetForCurrentView() is an expensive call - make sure to cache the ApplicationView
-		//	if (!m_applicationView)
-		//	{
-		//		m_applicationView = ViewManagement.ApplicationView.GetForCurrentView();
-		//	}
+		bool IsFullScreenOrTabletMode()
+		{
+			// ApplicationView.GetForCurrentView() is an expensive call - make sure to cache the ApplicationView
+			if (m_applicationView == null)
+			{
+				m_applicationView = ViewManagement.ApplicationView.GetForCurrentView();
+			}
 
-		//	// UIViewSettings.GetForCurrentView() is an expensive call - make sure to cache the UIViewSettings
-		//	if (!m_uiViewSettings)
-		//	{
-		//		m_uiViewSettings = ViewManagement.UIViewSettings.GetForCurrentView();
-		//	}
+			// UIViewSettings.GetForCurrentView() is an expensive call - make sure to cache the UIViewSettings
+			if (m_uiViewSettings == null)
+			{
+				m_uiViewSettings = ViewManagement.UIViewSettings.GetForCurrentView();
+			}
 
-		//	bool isFullScreenMode = m_applicationView.IsFullScreenMode();
-		//	bool isTabletMode = m_uiViewSettings.UserInteractionMode() == ViewManagement.UserInteractionMode.Touch;
+			bool isFullScreenMode = m_applicationView.IsFullScreenMode;
+			bool isTabletMode = m_uiViewSettings.UserInteractionMode == ViewManagement.UserInteractionMode.Touch;
 
-		//	return isFullScreenMode || isTabletMode;
-		//}
+			return isFullScreenMode || isTabletMode;
+		}
 
+
+		T GetContainerForData<T>(object data) where T:class
+		{
+			if (data == null)
+			{
+				return null;
+			}
+
+			if (data is T nvi)
+			{
+				return nvi;
+			}
+
+			var lv = IsTopNavigationView() ? m_topNavListView : m_leftNavListView;
+			if (lv != null)
+			{
+				var itemContainer = lv.ContainerFromItem(data);
+				if (itemContainer != null)
+				{
+					return itemContainer as T;
+				}
+			}
+
+			var settingsItem = m_settingsItem;
+			if (settingsItem != null)
+			{
+				if (settingsItem == data || settingsItem.Content == data)
+				{
+					return settingsItem as T;
+				}
+			}
+
+			return null;
+		}
 	}
 }
