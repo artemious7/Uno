@@ -355,8 +355,10 @@ namespace Windows.UI.Xaml.Controls
 						case Stretch.Uniform:
 							var desiredSize = new Size();
 							var aspectRatio = sourceSize.Width / sourceSize.Height;
-							desiredSize.Width = Math.Min(knownWidth, knownHeight * aspectRatio);
-							desiredSize.Height = Math.Min(knownHeight, knownWidth / aspectRatio);
+							// Since apsect ratio can have a lot of decimal, iOS ceils Image size to 0.5 if it's not a precise size (like 111.111111111)
+							// so the desiredSize will never match the actual size causing an infinite measuring and can freeze the app
+							desiredSize.Width = Math.Min(knownWidth, Math.Ceiling(knownHeight * aspectRatio * 2) / 2);
+							desiredSize.Height = Math.Min(knownHeight, Math.Ceiling(knownWidth / aspectRatio * 2) / 2);
 
 							if (this.Log().IsEnabled(Microsoft.Extensions.Logging.LogLevel.Debug))
 							{
