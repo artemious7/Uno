@@ -596,8 +596,6 @@ namespace Windows.UI.Xaml.Controls
 
 		protected virtual void OnItemsSourceChanged(DependencyPropertyChangedEventArgs e)
 		{
-			Items?.Clear();
-
 			IsGrouping = (e.NewValue as ICollectionView)?.CollectionGroups != null;
 			SetNeedsUpdateItems();
 			ObserveCollectionChanged();

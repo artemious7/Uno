@@ -43,6 +43,7 @@
  * Adjust Microsoft.CodeAnalysis versions to avoid restore conflicts
  * Fix element name matching existing types fails to compile (e.g. ContentPresenter)
  * 138735 [Android] Fixed broken DatePicker 
+ * 3326 [iOS][ItemsControl] ItemsControl in FlipView does not restore items properly
 
 ## Release 1.42
 
